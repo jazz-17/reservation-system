@@ -22,7 +22,7 @@ class AvailabilityService
         $endUtc = CarbonImmutable::parse($end, $timezone)->setTimezone('UTC');
 
         $reservations = Reservation::query()
-            ->blocking()
+            ->approved()
             ->overlapping($startUtc, $endUtc)
             ->orderBy('starts_at')
             ->get(['starts_at', 'ends_at']);

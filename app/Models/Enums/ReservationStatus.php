@@ -11,7 +11,6 @@ enum ReservationStatus: string
 
     public function blocksAvailability(): bool
     {
-        return in_array($this, [self::Pending, self::Approved], true);
+        return $this === self::Approved;
     }
 }
-

@@ -92,22 +92,29 @@ class ReservationService
             ]);
         }
 
-        $this->rules->validateForApproval($reservation);
+        try {
+            $updated = DB::transaction(function () use ($admin, $reservation, $reason): Reservation {
+                $this->acquireApprovalLock($reservation);
+                $this->rules->validateForApproval($reservation);
 
-        $updated = DB::transaction(function () use ($admin, $reservation, $reason): Reservation {
-            $reservation->forceFill([
-                'status' => ReservationStatus::Approved,
-                'decided_by' => $admin->id,
-                'decided_at' => now(),
-                'decision_reason' => $reason,
-            ])->save();
+                $reservation->forceFill([
+                    'status' => ReservationStatus::Approved,
+                    'decided_by' => $admin->id,
+                    'decided_at' => now(),
+                    'decision_reason' => $reason,
+                ])->save();
 
-            Audit::record('reservation.approved', actor: $admin, subject: $reservation, metadata: [
-                'reason' => $reason,
+                Audit::record('reservation.approved', actor: $admin, subject: $reservation, metadata: [
+                    'reason' => $reason,
+                ]);
+
+                return $reservation->refresh();
+            });
+        } catch (QueryException $exception) {
+            throw ValidationException::withMessages([
+                'starts_at' => 'Horario no disponible.',
             ]);
-
-            return $reservation->refresh();
-        });
+        }
 
         $this->enqueuePdf($updated);
         $this->enqueueEmails($updated, event: 'approved');
@@ -287,6 +294,17 @@ class ReservationService
 
         DB::select('select pg_advisory_xact_lock(hashtextextended(?, 0))', [
             "reservation:quota:school:{$user->professional_school_id}:base:{$user->base_year}:week:{$weekStartLocal}",
+        ]);
+    }
+
+    private function acquireApprovalLock(Reservation $reservation): void
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
+        DB::select('select pg_advisory_xact_lock(hashtextextended(?, 0))', [
+            "reservation:slot:{$reservation->starts_at->toDateTimeString()}:{$reservation->ends_at->toDateTimeString()}",
         ]);
     }
 }

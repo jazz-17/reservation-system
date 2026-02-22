@@ -238,7 +238,7 @@ class ReservationRulesService
     private function validateConflicts(CarbonImmutable $startsAtUtc, CarbonImmutable $endsAtUtc, ?int $ignoreReservationId = null): void
     {
         $query = Reservation::query()
-            ->blocking()
+            ->approved()
             ->overlapping($startsAtUtc, $endsAtUtc);
 
         if ($ignoreReservationId !== null) {

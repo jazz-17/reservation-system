@@ -44,12 +44,17 @@ test('registration is blocked when email is not in allow-list', function () {
 });
 
 test('registration succeeds when email is in allow-list', function () {
-    $email = 'student.allowed@example.edu';
+    $email = 'student.allowed@unmsm.edu.pe';
 
-    AllowListEntry::factory()->create(['email' => $email]);
     $school = ProfessionalSchool::factory()->create([
         'base_year_min' => 2020,
         'base_year_max' => 2024,
+    ]);
+
+    AllowListEntry::factory()->create([
+        'email' => $email,
+        'professional_school_id' => $school->id,
+        'base_year' => 2022,
     ]);
 
     $response = $this->post('/register', [
@@ -96,7 +101,7 @@ test('students can create a pending reservation and it blocks availability', fun
     expect($conflict)->toBeTrue();
 });
 
-test('creating a reservation on an occupied slot is rejected', function () {
+test('multiple students can request the same pending slot', function () {
     $startsAtLocal = CarbonImmutable::now('America/Lima')->addDay()->setTime(11, 0);
     $startsAtUtc = $startsAtLocal->setTimezone('UTC');
     $endsAtUtc = $startsAtUtc->addHour();
@@ -111,6 +116,28 @@ test('creating a reservation on an occupied slot is rejected', function () {
 
     $user2 = User::factory()->create();
     $this->actingAs($user2);
+
+    $this->post(route('reservations.store'), [
+        'starts_at' => $startsAtUtc->toIso8601String(),
+        'ends_at' => $endsAtUtc->toIso8601String(),
+    ])->assertRedirect();
+
+    expect(Reservation::query()->where('status', ReservationStatus::Pending)->count())->toBe(2);
+});
+
+test('creating a reservation on an approved slot is rejected', function () {
+    $startsAtLocal = CarbonImmutable::now('America/Lima')->addDay()->setTime(11, 0);
+    $startsAtUtc = $startsAtLocal->setTimezone('UTC');
+    $endsAtUtc = $startsAtUtc->addHour();
+
+    Reservation::factory()->create([
+        'status' => ReservationStatus::Approved,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $endsAtUtc,
+    ]);
+
+    $user = User::factory()->create();
+    $this->actingAs($user);
 
     $this->post(route('reservations.store'), [
         'starts_at' => $startsAtUtc->toIso8601String(),
@@ -482,6 +509,30 @@ test('public availability returns calendar events for a date range', function ()
     $blackoutEvent = collect($events)->firstWhere('extendedProps.type', 'blackout');
     expect($blackoutEvent)->not->toBeNull();
     expect($blackoutEvent['display'] ?? null)->toBe('background');
+});
+
+test('public availability does not show pending reservations', function () {
+    $timezone = 'America/Lima';
+    $date = CarbonImmutable::now($timezone)->addDay()->format('Y-m-d');
+    $endDate = CarbonImmutable::parse($date, $timezone)->addDay()->format('Y-m-d');
+
+    $startUtc = CarbonImmutable::parse("{$date} 10:00", $timezone)->setTimezone('UTC');
+
+    Reservation::factory()->create([
+        'status' => ReservationStatus::Pending,
+        'starts_at' => $startUtc,
+        'ends_at' => $startUtc->addHour(),
+    ]);
+
+    $response = $this->getJson(route('api.public.availability', [
+        'start' => $date,
+        'end' => $endDate,
+    ]));
+
+    $response->assertOk();
+
+    $reservationEvents = collect($response->json())->where('extendedProps.type', 'reservation');
+    expect($reservationEvents)->toBeEmpty();
 });
 
 test('pdf generation job stores the pdf and marks the artifact as sent', function () {

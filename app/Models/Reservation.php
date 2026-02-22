@@ -87,6 +87,15 @@ class Reservation extends Model
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
+    public function scopeApproved(Builder $query): Builder
+    {
+        return $query->where('status', ReservationStatus::Approved);
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
     public function scopeOverlapping(Builder $query, CarbonInterface $startUtc, CarbonInterface $endUtc): Builder
     {
         return $query
