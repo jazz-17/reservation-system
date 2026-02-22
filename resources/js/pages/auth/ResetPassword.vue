@@ -9,6 +9,8 @@ import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import { update } from '@/routes/password';
 
+defineOptions({ layout: false });
+
 const props = defineProps<{
     token: string;
     email: string;

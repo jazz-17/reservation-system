@@ -20,9 +20,14 @@ class ReservationController extends Controller
         return Inertia::render('reservations/Index');
     }
 
-    public function create(): Response
+    public function create(SettingsService $settings): Response
     {
-        return Inertia::render('reservations/Create');
+        return Inertia::render('reservations/Create', [
+            'timezone' => $settings->getString('timezone'),
+            'opening_hours' => $settings->get('opening_hours'),
+            'min_duration_minutes' => $settings->getInt('min_duration_minutes'),
+            'max_duration_minutes' => $settings->getInt('max_duration_minutes'),
+        ]);
     }
 
     public function store(StoreReservationRequest $request, ReservationService $service, SettingsService $settings): RedirectResponse
@@ -35,9 +40,7 @@ class ReservationController extends Controller
         $timezone = $settings->getString('timezone');
 
         $startsAtUtc = CarbonImmutable::parse($request->validated('starts_at'), $timezone)->setTimezone('UTC');
-        $endsAtUtc = $request->validated('ends_at') !== null
-            ? CarbonImmutable::parse($request->validated('ends_at'), $timezone)->setTimezone('UTC')
-            : null;
+        $endsAtUtc = CarbonImmutable::parse($request->validated('ends_at'), $timezone)->setTimezone('UTC');
 
         $service->createPending($user, $startsAtUtc, $endsAtUtc);
 

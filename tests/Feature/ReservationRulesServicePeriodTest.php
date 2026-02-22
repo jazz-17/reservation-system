@@ -57,3 +57,27 @@ test('blackouts block overlapping reservations', function () {
     expect(fn () => app(ReservationRulesService::class)->validateForCreation($user, $startsAtUtc, $endsAtUtc))
         ->toThrow(ValidationException::class);
 });
+
+test('duration shorter than min is rejected', function () {
+    $timezone = 'America/Lima';
+
+    $user = User::factory()->create();
+
+    $startsAtUtc = CarbonImmutable::now($timezone)->addDay()->setTime(10, 0)->setTimezone('UTC');
+    $endsAtUtc = $startsAtUtc->addMinutes(30);
+
+    expect(fn () => app(ReservationRulesService::class)->validateForCreation($user, $startsAtUtc, $endsAtUtc))
+        ->toThrow(ValidationException::class);
+});
+
+test('duration longer than max is rejected', function () {
+    $timezone = 'America/Lima';
+
+    $user = User::factory()->create();
+
+    $startsAtUtc = CarbonImmutable::now($timezone)->addDay()->setTime(10, 0)->setTimezone('UTC');
+    $endsAtUtc = $startsAtUtc->addHours(3);
+
+    expect(fn () => app(ReservationRulesService::class)->validateForCreation($user, $startsAtUtc, $endsAtUtc))
+        ->toThrow(ValidationException::class);
+});

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Form, Head, usePage } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import {
     index as allowListIndex,
     importMethod as importAllowList,
 } from '@/routes/admin/allow-list';
-import { type BreadcrumbItem } from '@/types';
+import type { ImportReport } from '@/types/admin';
 
 const props = defineProps<{
     count: number;
@@ -14,27 +14,18 @@ const props = defineProps<{
 
 const page = usePage();
 
-type ImportReport = {
-    imported: number;
-    duplicates: number;
-    invalid: number;
-    invalid_rows: Array<{ row: number; value: string | null }>;
-    batch_id: string;
-};
-
 const report = (page.props.flash?.import_report ?? null) as ImportReport | null;
 
-const breadcrumbs: BreadcrumbItem[] = [
+useBreadcrumbs([
     { title: 'Admin', href: '/admin/solicitudes' },
     { title: 'Allow-list', href: allowListIndex().url },
-];
+]);
 </script>
 
 <template>
     <Head title="Allow-list" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-4 p-4">
+    <div class="flex flex-col gap-4 p-4">
             <div>
                 <h1 class="text-lg font-semibold">Allow-list</h1>
                 <p class="text-sm text-muted-foreground">
@@ -119,6 +110,5 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
                 </Form>
             </div>
-        </div>
-    </AppLayout>
+    </div>
 </template>

@@ -1,46 +1,26 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
+import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
 import InputError from '@/components/InputError.vue';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
+import { formatDateTime } from '@/lib/formatters';
 import {
     destroy,
     index as blackoutsIndex,
     store as storeBlackout,
 } from '@/routes/admin/blackouts';
-import { type BreadcrumbItem } from '@/types';
-
-type Blackout = {
-    id: number;
-    starts_at: string;
-    ends_at: string;
-    reason?: string | null;
-};
+import type { Blackout } from '@/types/admin';
 
 const props = defineProps<{
     blackouts: Blackout[];
 }>();
 
-const breadcrumbs: BreadcrumbItem[] = [
+useBreadcrumbs([
     { title: 'Admin', href: '/admin/solicitudes' },
     { title: 'Blackouts', href: blackoutsIndex().url },
-];
-
-const formatDateTime = (iso: string): string => {
-    const d = new Date(iso);
-    return new Intl.DateTimeFormat('es-PE', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-    }).format(d);
-};
+]);
 
 const remove = (id: number): void => {
-    if (!confirm('¿Eliminar este bloqueo?')) {
-        return;
-    }
-
     router.delete(destroy(id).url);
 };
 </script>
@@ -48,8 +28,7 @@ const remove = (id: number): void => {
 <template>
     <Head title="Blackouts" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-4 p-4">
+    <div class="flex flex-col gap-4 p-4">
             <div>
                 <h1 class="text-lg font-semibold">Blackouts</h1>
                 <p class="text-sm text-muted-foreground">
@@ -132,13 +111,22 @@ const remove = (id: number): void => {
                                 {{ b.reason ?? '—' }}
                             </div>
                         </div>
-                        <button
-                            type="button"
-                            class="self-start rounded-md border border-border/60 px-3 py-1.5 text-xs md:self-auto"
-                            @click="remove(b.id)"
+                        <ConfirmDialog
+                            title="¿Eliminar este bloqueo?"
+                            description="Esta acción no se puede deshacer."
+                            confirm-label="Eliminar"
+                            variant="destructive"
+                            @confirm="remove(b.id)"
                         >
-                            Eliminar
-                        </button>
+                            <template #trigger>
+                                <button
+                                    type="button"
+                                    class="self-start rounded-md border border-border/60 px-3 py-1.5 text-xs md:self-auto"
+                                >
+                                    Eliminar
+                                </button>
+                            </template>
+                        </ConfirmDialog>
                     </div>
                     <div
                         v-if="props.blackouts.length === 0"
@@ -148,6 +136,5 @@ const remove = (id: number): void => {
                     </div>
                 </div>
             </div>
-        </div>
-    </AppLayout>
+    </div>
 </template>

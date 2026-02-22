@@ -58,7 +58,7 @@
                 </tr>
                 <tr>
                     <td class="label"><strong>Escuela / Base</strong></td>
-                    <td>{{ $reservation->professional_school }} / {{ $reservation->base }}</td>
+                    <td>{{ $reservation->professionalSchool?->name ?? '—' }} / {{ $reservation->baseLabel() }}</td>
                 </tr>
             </table>
         </div>

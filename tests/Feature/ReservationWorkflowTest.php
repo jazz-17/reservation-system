@@ -9,6 +9,7 @@ use App\Models\Blackout;
 use App\Models\Enums\ReservationArtifactKind;
 use App\Models\Enums\ReservationArtifactStatus;
 use App\Models\Enums\ReservationStatus;
+use App\Models\ProfessionalSchool;
 use App\Models\Reservation;
 use App\Models\ReservationArtifact;
 use App\Models\Setting;
@@ -20,12 +21,16 @@ use Illuminate\Support\Facades\Storage;
 
 test('registration is blocked when email is not in allow-list', function () {
     $email = 'student@example.edu';
+    $school = ProfessionalSchool::factory()->create([
+        'base_year_min' => 2020,
+        'base_year_max' => 2024,
+    ]);
 
     $response = $this->post('/register', [
         'first_name' => 'Juan',
         'last_name' => 'Pérez',
-        'professional_school' => 'E.P. Sistemas',
-        'base' => 'B22',
+        'professional_school_id' => $school->id,
+        'base_year' => 2022,
         'phone' => '999999999',
         'email' => $email,
         'password' => 'Password123!',
@@ -42,12 +47,16 @@ test('registration succeeds when email is in allow-list', function () {
     $email = 'student.allowed@example.edu';
 
     AllowListEntry::factory()->create(['email' => $email]);
+    $school = ProfessionalSchool::factory()->create([
+        'base_year_min' => 2020,
+        'base_year_max' => 2024,
+    ]);
 
     $response = $this->post('/register', [
         'first_name' => 'Ana',
         'last_name' => 'García',
-        'professional_school' => 'E.P. Sistemas',
-        'base' => 'B22',
+        'professional_school_id' => $school->id,
+        'base_year' => 2022,
         'phone' => '999999999',
         'email' => $email,
         'password' => 'Password123!',
@@ -66,9 +75,11 @@ test('students can create a pending reservation and it blocks availability', fun
 
     $startsAtLocal = CarbonImmutable::now('America/Lima')->addDay()->setTime(10, 0);
     $startsAtUtc = $startsAtLocal->setTimezone('UTC');
+    $endsAtUtc = $startsAtUtc->addHour();
 
     $response = $this->post(route('reservations.store'), [
         'starts_at' => $startsAtUtc->toIso8601String(),
+        'ends_at' => $endsAtUtc->toIso8601String(),
     ]);
 
     $response->assertRedirect(route('reservations.index'));
@@ -88,12 +99,14 @@ test('students can create a pending reservation and it blocks availability', fun
 test('creating a reservation on an occupied slot is rejected', function () {
     $startsAtLocal = CarbonImmutable::now('America/Lima')->addDay()->setTime(11, 0);
     $startsAtUtc = $startsAtLocal->setTimezone('UTC');
+    $endsAtUtc = $startsAtUtc->addHour();
 
     $user1 = User::factory()->create();
     $this->actingAs($user1);
 
     $this->post(route('reservations.store'), [
         'starts_at' => $startsAtUtc->toIso8601String(),
+        'ends_at' => $endsAtUtc->toIso8601String(),
     ])->assertRedirect();
 
     $user2 = User::factory()->create();
@@ -101,6 +114,7 @@ test('creating a reservation on an occupied slot is rejected', function () {
 
     $this->post(route('reservations.store'), [
         'starts_at' => $startsAtUtc->toIso8601String(),
+        'ends_at' => $endsAtUtc->toIso8601String(),
     ])->assertSessionHasErrors('starts_at');
 });
 
@@ -111,16 +125,27 @@ test('students are limited by max active reservations per user', function () {
     $start1 = CarbonImmutable::now('America/Lima')->addDay()->setTime(12, 0)->setTimezone('UTC');
     $start2 = CarbonImmutable::now('America/Lima')->addDays(2)->setTime(12, 0)->setTimezone('UTC');
 
-    $this->post(route('reservations.store'), ['starts_at' => $start1->toIso8601String()])->assertRedirect();
+    $this->post(route('reservations.store'), [
+        'starts_at' => $start1->toIso8601String(),
+        'ends_at' => $start1->addHour()->toIso8601String(),
+    ])->assertRedirect();
 
-    $this->post(route('reservations.store'), ['starts_at' => $start2->toIso8601String()])
+    $this->post(route('reservations.store'), [
+        'starts_at' => $start2->toIso8601String(),
+        'ends_at' => $start2->addHour()->toIso8601String(),
+    ])
         ->assertSessionHasErrors('reservation');
 });
 
 test('weekly quota is enforced per school and base', function () {
+    $school = ProfessionalSchool::factory()->create([
+        'base_year_min' => 2020,
+        'base_year_max' => 2024,
+    ]);
+
     $baseUser = User::factory()->create([
-        'professional_school' => 'E.P. Sistemas',
-        'base' => 'B22',
+        'professional_school_id' => $school->id,
+        'base_year' => 2022,
     ]);
 
     $startA = CarbonImmutable::now('America/Lima')->addDay()->setTime(10, 0)->setTimezone('UTC');
@@ -128,26 +153,35 @@ test('weekly quota is enforced per school and base', function () {
     $startC = CarbonImmutable::now('America/Lima')->addDay()->setTime(14, 0)->setTimezone('UTC');
 
     $user1 = User::factory()->create([
-        'professional_school' => $baseUser->professional_school,
-        'base' => $baseUser->base,
+        'professional_school_id' => $baseUser->professional_school_id,
+        'base_year' => $baseUser->base_year,
     ]);
     $user2 = User::factory()->create([
-        'professional_school' => $baseUser->professional_school,
-        'base' => $baseUser->base,
+        'professional_school_id' => $baseUser->professional_school_id,
+        'base_year' => $baseUser->base_year,
     ]);
     $user3 = User::factory()->create([
-        'professional_school' => $baseUser->professional_school,
-        'base' => $baseUser->base,
+        'professional_school_id' => $baseUser->professional_school_id,
+        'base_year' => $baseUser->base_year,
     ]);
 
     $this->actingAs($user1);
-    $this->post(route('reservations.store'), ['starts_at' => $startA->toIso8601String()])->assertRedirect();
+    $this->post(route('reservations.store'), [
+        'starts_at' => $startA->toIso8601String(),
+        'ends_at' => $startA->addHour()->toIso8601String(),
+    ])->assertRedirect();
 
     $this->actingAs($user2);
-    $this->post(route('reservations.store'), ['starts_at' => $startB->toIso8601String()])->assertRedirect();
+    $this->post(route('reservations.store'), [
+        'starts_at' => $startB->toIso8601String(),
+        'ends_at' => $startB->addHour()->toIso8601String(),
+    ])->assertRedirect();
 
     $this->actingAs($user3);
-    $this->post(route('reservations.store'), ['starts_at' => $startC->toIso8601String()])
+    $this->post(route('reservations.store'), [
+        'starts_at' => $startC->toIso8601String(),
+        'ends_at' => $startC->addHour()->toIso8601String(),
+    ])
         ->assertSessionHasErrors('reservation');
 });
 
@@ -162,8 +196,8 @@ test('admins cannot approve a reservation if a conflict exists at approval time'
         'status' => ReservationStatus::Pending,
         'starts_at' => $startsAtUtc,
         'ends_at' => $startsAtUtc->addHour(),
-        'professional_school' => $user->professional_school,
-        'base' => $user->base,
+        'professional_school_id' => $user->professional_school_id,
+        'base_year' => $user->base_year,
     ]);
 
     Reservation::factory()->create([
@@ -171,8 +205,8 @@ test('admins cannot approve a reservation if a conflict exists at approval time'
         'status' => ReservationStatus::Approved,
         'starts_at' => $startsAtUtc,
         'ends_at' => $startsAtUtc->addHour(),
-        'professional_school' => $user->professional_school,
-        'base' => $user->base,
+        'professional_school_id' => $user->professional_school_id,
+        'base_year' => $user->base_year,
     ]);
 
     $this->actingAs($admin);
@@ -182,6 +216,12 @@ test('admins cannot approve a reservation if a conflict exists at approval time'
 
 test('approving a reservation enqueues pdf and email artifacts', function () {
     Queue::fake();
+
+    Setting::query()->create([
+        'key' => 'email_notifications_enabled',
+        'value' => true,
+        'updated_by' => null,
+    ]);
 
     Setting::query()->create([
         'key' => 'notify_admin_emails',
@@ -198,8 +238,8 @@ test('approving a reservation enqueues pdf and email artifacts', function () {
         'status' => ReservationStatus::Pending,
         'starts_at' => $startsAtUtc,
         'ends_at' => $startsAtUtc->addHour(),
-        'professional_school' => $user->professional_school,
-        'base' => $user->base,
+        'professional_school_id' => $user->professional_school_id,
+        'base_year' => $user->base_year,
     ]);
 
     $this->actingAs($admin);
@@ -240,8 +280,8 @@ test('students can cancel a pending reservation', function () {
         'status' => ReservationStatus::Pending,
         'starts_at' => $startsAtUtc,
         'ends_at' => $startsAtUtc->addHour(),
-        'professional_school' => (string) $user->professional_school,
-        'base' => (string) $user->base,
+        'professional_school_id' => $user->professional_school_id,
+        'base_year' => $user->base_year,
     ]);
 
     $this->post(route('reservations.cancel', $reservation), ['reason' => 'Cambio de planes'])
@@ -254,7 +294,7 @@ test('students can cancel a pending reservation', function () {
 
     expect(AuditEvent::query()->where('event_type', 'reservation.cancelled')->where('subject_id', $reservation->id)->exists())->toBeTrue();
 
-    Queue::assertPushed(SendReservationEmail::class);
+    Queue::assertNotPushed(SendReservationEmail::class);
 });
 
 test('cancellation cutoff is enforced', function () {
@@ -268,8 +308,8 @@ test('cancellation cutoff is enforced', function () {
         'status' => ReservationStatus::Pending,
         'starts_at' => $startsAtUtc,
         'ends_at' => $startsAtUtc->addHour(),
-        'professional_school' => (string) $user->professional_school,
-        'base' => (string) $user->base,
+        'professional_school_id' => $user->professional_school_id,
+        'base_year' => $user->base_year,
     ]);
 
     $this->post(route('reservations.cancel', $reservation), ['reason' => null])
@@ -292,8 +332,8 @@ test('approved reservations can be cancelled by the student', function () {
         'status' => ReservationStatus::Approved,
         'starts_at' => $startsAtUtc,
         'ends_at' => $startsAtUtc->addHour(),
-        'professional_school' => (string) $user->professional_school,
-        'base' => (string) $user->base,
+        'professional_school_id' => $user->professional_school_id,
+        'base_year' => $user->base_year,
     ]);
 
     $this->post(route('reservations.cancel', $reservation), ['reason' => null])
@@ -304,7 +344,7 @@ test('approved reservations can be cancelled by the student', function () {
 
     expect(AuditEvent::query()->where('event_type', 'reservation.cancelled')->where('subject_id', $reservation->id)->exists())->toBeTrue();
 
-    Queue::assertPushed(SendReservationEmail::class);
+    Queue::assertNotPushed(SendReservationEmail::class);
 });
 
 test('students cannot cancel another student reservation', function () {
@@ -318,8 +358,8 @@ test('students cannot cancel another student reservation', function () {
         'status' => ReservationStatus::Pending,
         'starts_at' => $startsAtUtc,
         'ends_at' => $startsAtUtc->addHour(),
-        'professional_school' => (string) $owner->professional_school,
-        'base' => (string) $owner->base,
+        'professional_school_id' => $owner->professional_school_id,
+        'base_year' => $owner->base_year,
     ]);
 
     $this->actingAs($attacker)
@@ -329,6 +369,12 @@ test('students cannot cancel another student reservation', function () {
 
 test('admins can reject a pending reservation end-to-end', function () {
     Queue::fake();
+
+    Setting::query()->create([
+        'key' => 'email_notifications_enabled',
+        'value' => true,
+        'updated_by' => null,
+    ]);
 
     Setting::query()->create([
         'key' => 'notify_admin_emails',
@@ -346,8 +392,8 @@ test('admins can reject a pending reservation end-to-end', function () {
         'status' => ReservationStatus::Pending,
         'starts_at' => $startsAtUtc,
         'ends_at' => $startsAtUtc->addHour(),
-        'professional_school' => (string) $student->professional_school,
-        'base' => (string) $student->base,
+        'professional_school_id' => $student->professional_school_id,
+        'base_year' => $student->base_year,
     ]);
 
     $this->actingAs($admin)
@@ -369,6 +415,7 @@ test('admins can reject a pending reservation end-to-end', function () {
 test('public availability marks approved reservations as occupied', function () {
     $timezone = 'America/Lima';
     $date = CarbonImmutable::now($timezone)->addDay()->format('Y-m-d');
+    $endDate = CarbonImmutable::parse($date, $timezone)->addDay()->format('Y-m-d');
 
     $startUtc = CarbonImmutable::parse("{$date} 10:00", $timezone)->setTimezone('UTC');
 
@@ -379,20 +426,22 @@ test('public availability marks approved reservations as occupied', function () 
     ]);
 
     $response = $this->getJson(route('api.public.availability', [
-        'from' => $date,
-        'to' => $date,
+        'start' => $date,
+        'end' => $endDate,
     ]));
 
     $response->assertOk();
 
-    $payload = $response->json();
-    $day = collect($payload['days'] ?? [])->firstWhere('date', $date);
+    $events = $response->json();
+    expect($events)->toBeArray();
 
-    expect($day)->not->toBeNull();
+    $reservationEventStart = $startUtc->setTimezone($timezone)->toIso8601String();
 
-    $slot = collect($day['slots'] ?? [])->firstWhere('start', $startUtc->toIso8601String());
-    expect($slot)->not->toBeNull();
-    expect($slot['status'])->toBe('occupied');
+    $reservationEvent = collect($events)->firstWhere('start', $reservationEventStart);
+    expect($reservationEvent)->not->toBeNull();
+    expect($reservationEvent['title'] ?? null)->toBe('Ocupado');
+    expect($reservationEvent['color'] ?? null)->toBe('#f59e0b');
+    expect($reservationEvent['extendedProps']['type'] ?? null)->toBe('reservation');
 });
 
 test('public availability returns calendar events for a date range', function () {

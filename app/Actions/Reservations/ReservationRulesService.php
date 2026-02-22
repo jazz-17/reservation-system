@@ -4,7 +4,6 @@ namespace App\Actions\Reservations;
 
 use App\Actions\Settings\SettingsService;
 use App\Models\Blackout;
-use App\Models\Enums\BookingMode;
 use App\Models\Enums\ReservationStatus;
 use App\Models\Reservation;
 use App\Models\User;
@@ -28,14 +27,13 @@ class ReservationRulesService
         }
 
         $timezone = $this->settings->getString('timezone');
-        $mode = BookingMode::from($this->settings->getString('booking_mode'));
 
         $startsAtLocal = $startsAtUtc->setTimezone($timezone);
         $endsAtLocal = $endsAtUtc->setTimezone($timezone);
 
+        $this->validateDuration($startsAtUtc, $endsAtUtc);
         $this->validateLeadTime($startsAtLocal);
         $this->validateOpeningHours($startsAtLocal, $endsAtLocal);
-        $this->validateModeConstraints($mode, $startsAtLocal, $endsAtLocal);
         $this->validateBlackouts($startsAtUtc, $endsAtUtc);
         $this->validateUserActiveLimit($user);
         $this->validateWeeklyQuota($user, $startsAtLocal);
@@ -46,19 +44,20 @@ class ReservationRulesService
     {
         $timezone = $this->settings->getString('timezone');
 
-        $this->validateBlackouts(
-            CarbonImmutable::parse($reservation->starts_at)->setTimezone('UTC'),
-            CarbonImmutable::parse($reservation->ends_at)->setTimezone('UTC'),
-        );
+        $startsAtUtc = CarbonImmutable::parse($reservation->starts_at)->setTimezone('UTC');
+        $endsAtUtc = CarbonImmutable::parse($reservation->ends_at)->setTimezone('UTC');
 
-        $startsAtLocal = CarbonImmutable::parse($reservation->starts_at)->setTimezone($timezone);
-        $endsAtLocal = CarbonImmutable::parse($reservation->ends_at)->setTimezone($timezone);
+        $this->validateDuration($startsAtUtc, $endsAtUtc);
+        $this->validateBlackouts($startsAtUtc, $endsAtUtc);
+
+        $startsAtLocal = $startsAtUtc->setTimezone($timezone);
+        $endsAtLocal = $endsAtUtc->setTimezone($timezone);
 
         $this->validateOpeningHours($startsAtLocal, $endsAtLocal);
 
         $this->validateConflicts(
-            CarbonImmutable::parse($reservation->starts_at)->setTimezone('UTC'),
-            CarbonImmutable::parse($reservation->ends_at)->setTimezone('UTC'),
+            $startsAtUtc,
+            $endsAtUtc,
             ignoreReservationId: $reservation->id,
         );
     }
@@ -141,86 +140,16 @@ class ReservationRulesService
         }
     }
 
-    private function validateModeConstraints(BookingMode $mode, CarbonImmutable $startsAtLocal, CarbonImmutable $endsAtLocal): void
+    private function validateDuration(CarbonImmutable $startsAtUtc, CarbonImmutable $endsAtUtc): void
     {
-        $stepMinutes = $this->settings->getInt('slot_step_minutes');
+        $durationMinutes = $startsAtUtc->diffInMinutes($endsAtUtc);
+        $min = $this->settings->getInt('min_duration_minutes');
+        $max = $this->settings->getInt('max_duration_minutes');
 
-        $alignsToStep = function (CarbonImmutable $dateTime) use ($stepMinutes): bool {
-            if ($dateTime->second !== 0) {
-                return false;
-            }
-
-            $minutes = $dateTime->hour * 60 + $dateTime->minute;
-
-            return $minutes % $stepMinutes === 0;
-        };
-
-        if (! $alignsToStep($startsAtLocal)) {
+        if ($durationMinutes < $min || $durationMinutes > $max) {
             throw ValidationException::withMessages([
-                'starts_at' => 'La hora de inicio no es válida.',
+                'ends_at' => 'La duración seleccionada no es válida.',
             ]);
-        }
-
-        if ($mode === BookingMode::FixedDuration) {
-            $duration = $this->settings->getInt('slot_duration_minutes');
-
-            if ($startsAtLocal->addMinutes($duration)->notEqualTo($endsAtLocal)) {
-                throw ValidationException::withMessages([
-                    'ends_at' => 'La duración seleccionada no es válida.',
-                ]);
-            }
-        }
-
-        if ($mode === BookingMode::VariableDuration) {
-            if (! $alignsToStep($endsAtLocal)) {
-                throw ValidationException::withMessages([
-                    'ends_at' => 'La hora de fin no es válida.',
-                ]);
-            }
-
-            $durationMinutes = $startsAtLocal->diffInMinutes($endsAtLocal);
-            $min = $this->settings->getInt('min_duration_minutes');
-            $max = $this->settings->getInt('max_duration_minutes');
-
-            if ($durationMinutes < $min || $durationMinutes > $max) {
-                throw ValidationException::withMessages([
-                    'ends_at' => 'La duración seleccionada no es válida.',
-                ]);
-            }
-        }
-
-        if ($mode === BookingMode::PredefinedBlocks) {
-            $blocksByDay = $this->settings->get('predefined_blocks');
-
-            if (! is_array($blocksByDay)) {
-                throw ValidationException::withMessages([
-                    'starts_at' => 'No hay bloques predefinidos configurados.',
-                ]);
-            }
-
-            $weekday = strtolower($startsAtLocal->format('D'));
-            $blocks = $blocksByDay[$weekday] ?? [];
-
-            $matchesBlock = false;
-            foreach ($blocks as $block) {
-                if (! is_array($block) || ! isset($block['start'], $block['end'])) {
-                    continue;
-                }
-
-                $blockStart = CarbonImmutable::parse($startsAtLocal->format('Y-m-d').' '.$block['start'], $startsAtLocal->getTimezone());
-                $blockEnd = CarbonImmutable::parse($startsAtLocal->format('Y-m-d').' '.$block['end'], $startsAtLocal->getTimezone());
-
-                if ($blockStart->equalTo($startsAtLocal) && $blockEnd->equalTo($endsAtLocal)) {
-                    $matchesBlock = true;
-                    break;
-                }
-            }
-
-            if (! $matchesBlock) {
-                throw ValidationException::withMessages([
-                    'starts_at' => 'El bloque seleccionado no es válido.',
-                ]);
-            }
         }
     }
 
@@ -281,6 +210,10 @@ class ReservationRulesService
             return;
         }
 
+        if ($user->professional_school_id === null || $user->base_year === null) {
+            return;
+        }
+
         $weekStartLocal = $startsAtLocal->startOfWeek(CarbonInterface::MONDAY);
         $weekEndLocal = $weekStartLocal->addWeek();
 
@@ -289,8 +222,8 @@ class ReservationRulesService
 
         $count = Reservation::query()
             ->blocking()
-            ->where('professional_school', $user->professional_school)
-            ->where('base', $user->base)
+            ->where('professional_school_id', $user->professional_school_id)
+            ->where('base_year', $user->base_year)
             ->where('starts_at', '>=', $weekStartUtc)
             ->where('starts_at', '<', $weekEndUtc)
             ->count();

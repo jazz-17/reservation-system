@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\Faculty;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -66,7 +67,16 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
-        Fortify::registerView(fn () => Inertia::render('auth/Register'));
+        Fortify::registerView(fn () => Inertia::render('auth/Register', [
+            'faculties' => Faculty::query()
+                ->where('active', true)
+                ->orderBy('name')
+                ->with(['professionalSchools' => fn ($query) => $query
+                    ->where('active', true)
+                    ->orderBy('name')
+                    ->select(['id', 'faculty_id', 'name', 'base_year_min', 'base_year_max'])])
+                ->get(['id', 'name']),
+        ]));
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/TwoFactorChallenge'));
 

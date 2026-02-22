@@ -5,16 +5,22 @@ import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import '../css/app.css';
 import { initializeTheme } from './composables/useAppearance';
+import AppLayout from './layouts/AppLayout.vue';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
-    resolve: (name) =>
-        resolvePageComponent(
+    resolve: async (name) => {
+        const page = await resolvePageComponent(
             `./pages/${name}.vue`,
             import.meta.glob<DefineComponent>('./pages/**/*.vue'),
-        ),
+        );
+        if (page.default.layout === undefined) {
+            page.default.layout = AppLayout;
+        }
+        return page;
+    },
     setup({ el, App, props, plugin }) {
         const queryClient = new QueryClient({
             defaultOptions: {

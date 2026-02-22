@@ -21,7 +21,11 @@ class AdminRequestsController extends Controller
 
         $reservations = Reservation::query()
             ->where('status', ReservationStatus::Pending)
-            ->with(['user:id,name,email,first_name,last_name,phone,professional_school,base'])
+            ->with([
+                'user:id,name,email,first_name,last_name,phone,professional_school_id,base_year',
+                'user.professionalSchool:id,faculty_id,name',
+                'user.professionalSchool.faculty:id,name',
+            ])
             ->orderBy('starts_at')
             ->get();
 

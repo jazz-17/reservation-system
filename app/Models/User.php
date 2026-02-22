@@ -3,11 +3,12 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Models\Enums\UserRole;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
@@ -24,8 +25,8 @@ class User extends Authenticatable
         'name',
         'first_name',
         'last_name',
-        'professional_school',
-        'base',
+        'professional_school_id',
+        'base_year',
         'phone',
         'role',
         'email',
@@ -56,12 +57,29 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'role' => UserRole::class,
+            'base_year' => 'integer',
         ];
     }
 
     public function reservations(): HasMany
     {
         return $this->hasMany(Reservation::class);
+    }
+
+    public function professionalSchool(): BelongsTo
+    {
+        return $this->belongsTo(ProfessionalSchool::class);
+    }
+
+    public function baseLabel(): string
+    {
+        if ($this->base_year === null) {
+            return '—';
+        }
+
+        $yy = str_pad((string) ($this->base_year % 100), 2, '0', STR_PAD_LEFT);
+
+        return "B{$yy}";
     }
 
     public function isAdmin(): bool

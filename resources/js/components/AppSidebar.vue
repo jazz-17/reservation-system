@@ -12,6 +12,7 @@ import {
     Ban,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
+
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -29,8 +30,10 @@ import { index as adminAllowList } from '@/routes/admin/allow-list';
 import { index as adminArtifacts } from '@/routes/admin/artifacts';
 import { index as adminAudit } from '@/routes/admin/audit';
 import { index as adminBlackouts } from '@/routes/admin/blackouts';
+import { index as adminFaculties } from '@/routes/admin/faculties';
 import { index as adminHistory } from '@/routes/admin/history';
 import { index as adminRequests } from '@/routes/admin/requests';
+import { index as adminSchools } from '@/routes/admin/schools';
 import { edit as adminSettings } from '@/routes/admin/settings';
 import { publicMethod as publicCalendar } from '@/routes/calendar';
 import {
@@ -43,72 +46,76 @@ import AppLogo from './AppLogo.vue';
 const page = usePage();
 const isAdmin = computed(() => page.props.auth?.user?.role === 'admin');
 
-const mainNavItems = computed<NavItem[]>(() => {
-    const items: NavItem[] = [
-        {
-            title: 'Dashboard',
-            href: dashboard(),
-            icon: LayoutGrid,
-        },
-        {
-            title: 'Calendario',
-            href: publicCalendar(),
-            icon: CalendarDays,
-        },
-        {
-            title: 'Mis reservas',
-            href: reservationsIndex(),
-            icon: ListChecks,
-        },
-        {
-            title: 'Nueva solicitud',
-            href: reservationsCreate(),
-            icon: CalendarDays,
-        },
-    ];
+const mainNavItems: NavItem[] = [
+    {
+        title: 'Dashboard',
+        href: dashboard(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Calendario',
+        href: publicCalendar(),
+        icon: CalendarDays,
+    },
+    {
+        title: 'Mis reservas',
+        href: reservationsIndex(),
+        icon: ListChecks,
+    },
+    {
+        title: 'Nueva solicitud',
+        href: reservationsCreate(),
+        icon: CalendarDays,
+    },
+];
 
-    if (isAdmin.value) {
-        items.push(
-            {
-                title: 'Admin — Solicitudes',
-                href: adminRequests(),
-                icon: Shield,
-            },
-            {
-                title: 'Admin — Historial',
-                href: adminHistory(),
-                icon: BookOpen,
-            },
-            {
-                title: 'Admin — Configuración',
-                href: adminSettings(),
-                icon: Settings,
-            },
-            {
-                title: 'Admin — Allow-list',
-                href: adminAllowList(),
-                icon: ListChecks,
-            },
-            {
-                title: 'Admin — Blackouts',
-                href: adminBlackouts(),
-                icon: Ban,
-            },
-            {
-                title: 'Admin — Auditoría',
-                href: adminAudit(),
-                icon: BookOpen,
-            },
-            {
-                title: 'Admin — Reintentos',
-                href: adminArtifacts(),
-                icon: Shield,
-            },
-        );
-    }
-
-    return items;
-});
+const adminNavItems: NavItem[] = [
+    {
+        title: 'Solicitudes',
+        href: adminRequests(),
+        icon: Shield,
+    },
+    {
+        title: 'Historial',
+        href: adminHistory(),
+        icon: BookOpen,
+    },
+    {
+        title: 'Configuración',
+        href: adminSettings(),
+        icon: Settings,
+    },
+    {
+        title: 'Facultades',
+        href: adminFaculties(),
+        icon: Shield,
+    },
+    {
+        title: 'Escuelas',
+        href: adminSchools(),
+        icon: Shield,
+    },
+    {
+        title: 'Allow-list',
+        href: adminAllowList(),
+        icon: ListChecks,
+    },
+    {
+        title: 'Blackouts',
+        href: adminBlackouts(),
+        icon: Ban,
+    },
+    {
+        title: 'Auditoría',
+        href: adminAudit(),
+        icon: BookOpen,
+    },
+    {
+        title: 'Reintentos',
+        href: adminArtifacts(),
+        icon: Shield,
+    },
+];
 
 const footerNavItems: NavItem[] = [
     {
@@ -140,10 +147,11 @@ const footerNavItems: NavItem[] = [
 
         <SidebarContent>
             <NavMain :items="mainNavItems" />
+            <NavMain v-if="isAdmin" :items="adminNavItems" label="Administración" />
         </SidebarContent>
 
         <SidebarFooter>
-            <NavFooter :items="footerNavItems" />
+            <!-- <NavFooter :items="footerNavItems" /> -->
             <NavUser />
         </SidebarFooter>
     </Sidebar>

@@ -28,7 +28,7 @@ class GenerateReservationPdf implements ShouldQueue
     public function handle(SettingsService $settings): void
     {
         $artifact = ReservationArtifact::query()
-            ->with(['reservation.user'])
+            ->with(['reservation.user', 'reservation.professionalSchool'])
             ->find($this->artifactId);
 
         if ($artifact === null || $artifact->kind !== ReservationArtifactKind::Pdf) {

@@ -1,25 +1,10 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
+import { formatAuditSubject, formatDateTime } from '@/lib/formatters';
 import { index as auditIndex } from '@/routes/admin/audit';
-import { type BreadcrumbItem } from '@/types';
-
-type Actor = {
-    id: number;
-    name: string;
-};
-
-type AuditEvent = {
-    id: number;
-    event_type: string;
-    actor_id: number | null;
-    actor?: Actor | null;
-    subject_type: string | null;
-    subject_id: number | null;
-    metadata: Record<string, unknown> | null;
-    created_at: string;
-};
+import type { AuditEvent } from '@/types/admin';
 
 const props = defineProps<{
     events: AuditEvent[];
@@ -27,10 +12,10 @@ const props = defineProps<{
     filters: { event_type: string | null; from: string | null; to: string | null };
 }>();
 
-const breadcrumbs: BreadcrumbItem[] = [
+useBreadcrumbs([
     { title: 'Admin', href: '/admin/solicitudes' },
     { title: 'Auditoría', href: auditIndex().url },
-];
+]);
 
 const eventType = ref(props.filters.event_type ?? '');
 const from = ref(props.filters.from ?? '');
@@ -65,35 +50,12 @@ const clearFilters = (): void => {
 
     applyFilters();
 };
-
-const formatDateTime = (iso: string): string => {
-    const d = new Date(iso);
-    return new Intl.DateTimeFormat('es-PE', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-    }).format(d);
-};
-
-const subjectLabel = (e: AuditEvent): string => {
-    if (!e.subject_type || !e.subject_id) {
-        return '—';
-    }
-
-    const basename = e.subject_type.split('\\').pop() ?? e.subject_type;
-
-    return `${basename}#${e.subject_id}`;
-};
 </script>
 
 <template>
     <Head title="Auditoría" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-4 p-4">
+    <div class="flex flex-col gap-4 p-4">
             <div>
                 <h1 class="text-lg font-semibold">Auditoría</h1>
                 <p class="text-sm text-muted-foreground">
@@ -179,7 +141,7 @@ const subjectLabel = (e: AuditEvent): string => {
                             class="border-t border-border/60"
                         >
                             <td class="px-4 py-3">
-                                {{ formatDateTime(e.created_at) }}
+                                {{ formatDateTime(e.created_at, { seconds: true }) }}
                             </td>
                             <td class="px-4 py-3">{{ e.event_type }}</td>
                             <td class="px-4 py-3">
@@ -196,7 +158,7 @@ const subjectLabel = (e: AuditEvent): string => {
                                 >
                             </td>
                             <td class="px-4 py-3">
-                                {{ subjectLabel(e) }}
+                                {{ formatAuditSubject(e) }}
                             </td>
                         </tr>
                         <tr v-if="props.events.length === 0">
@@ -210,6 +172,5 @@ const subjectLabel = (e: AuditEvent): string => {
                     </tbody>
                 </table>
             </div>
-        </div>
-    </AppLayout>
+    </div>
 </template>

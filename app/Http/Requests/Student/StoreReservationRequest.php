@@ -2,8 +2,6 @@
 
 namespace App\Http\Requests\Student;
 
-use App\Actions\Settings\SettingsService;
-use App\Models\Enums\BookingMode;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -24,16 +22,9 @@ class StoreReservationRequest extends FormRequest
      */
     public function rules(): array
     {
-        $settings = app(SettingsService::class);
-        $mode = BookingMode::from($settings->getString('booking_mode'));
-
         return [
             'starts_at' => ['required', 'date'],
-            'ends_at' => [
-                $mode === BookingMode::FixedDuration ? 'nullable' : 'required',
-                'date',
-                'after:starts_at',
-            ],
+            'ends_at' => ['required', 'date', 'after:starts_at'],
         ];
     }
 }

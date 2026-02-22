@@ -30,7 +30,11 @@ class AdminHistoryController extends Controller
         $timezone = $settings->getString('timezone');
 
         $query = Reservation::query()
-            ->with(['user:id,name,email,professional_school,base'])
+            ->with([
+                'user:id,name,email,professional_school_id,base_year',
+                'user.professionalSchool:id,faculty_id,name',
+                'user.professionalSchool.faculty:id,name',
+            ])
             ->latest('starts_at');
 
         if (! empty($validated['status'])) {

@@ -2,53 +2,23 @@
 import { Form, Head } from '@inertiajs/vue3';
 import { computed, reactive } from 'vue';
 import InputError from '@/components/InputError.vue';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import {
     update as updateSettings,
     edit as editSettings,
 } from '@/routes/admin/settings';
-import { type BreadcrumbItem } from '@/types';
-
-type OpeningHours = Record<
-    'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun',
-    { open: string; close: string }
->;
-
-type PredefinedBlocks = Record<
-    'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun',
-    { start: string; end: string }[]
->;
-
-type Settings = {
-    timezone: string;
-    opening_hours: OpeningHours;
-    booking_mode: 'fixed_duration' | 'variable_duration' | 'predefined_blocks';
-    slot_duration_minutes: number;
-    slot_step_minutes: number;
-    min_duration_minutes: number;
-    max_duration_minutes: number;
-    lead_time_min_hours: number;
-    lead_time_max_days: number;
-    max_active_reservations_per_user: number;
-    weekly_quota_per_school_base: number;
-    pending_expiration_hours: number;
-    cancel_cutoff_hours: number;
-    notify_admin_emails: { to: string[]; cc: string[]; bcc: string[] };
-    notify_student_on_approval: boolean;
-    pdf_template: string;
-    predefined_blocks: PredefinedBlocks;
-};
+import type { AdminSettings, DayKey, OpeningHours } from '@/types/admin';
 
 const props = defineProps<{
-    settings: Settings;
+    settings: AdminSettings;
 }>();
 
-const breadcrumbs: BreadcrumbItem[] = [
+useBreadcrumbs([
     { title: 'Admin', href: '/admin/solicitudes' },
     { title: 'Configuración', href: editSettings().url },
-];
+]);
 
-const days: Array<keyof OpeningHours> = [
+const days: DayKey[] = [
     'mon',
     'tue',
     'wed',
@@ -58,7 +28,7 @@ const days: Array<keyof OpeningHours> = [
     'sun',
 ];
 
-const dayLabels: Record<keyof OpeningHours, string> = {
+const dayLabels: Record<DayKey, string> = {
     mon: 'Lun',
     tue: 'Mar',
     wed: 'Mié',
@@ -68,7 +38,7 @@ const dayLabels: Record<keyof OpeningHours, string> = {
     sun: 'Dom',
 };
 
-const formState = reactive<Settings>({
+const formState = reactive<AdminSettings>({
     ...props.settings,
     notify_admin_emails: {
         to: props.settings.notify_admin_emails?.to ?? [],
@@ -76,6 +46,8 @@ const formState = reactive<Settings>({
         bcc: props.settings.notify_admin_emails?.bcc ?? [],
     },
 });
+
+const emailsEnabled = computed(() => formState.email_notifications_enabled);
 
 const toTextarea = (values: string[]): string => values.join('\n');
 const fromTextarea = (value: string): string[] =>
@@ -105,25 +77,6 @@ const notifyBcc = computed({
     },
 });
 
-const addBlock = (day: keyof PredefinedBlocks): void => {
-    formState.predefined_blocks[day].push({ start: '08:00', end: '09:00' });
-};
-
-const removeBlock = (day: keyof PredefinedBlocks, index: number): void => {
-    formState.predefined_blocks[day].splice(index, 1);
-};
-
-const bookingModeLabel = computed((): string => {
-    switch (formState.booking_mode) {
-        case 'fixed_duration':
-            return 'Duración fija';
-        case 'variable_duration':
-            return 'Duración variable';
-        case 'predefined_blocks':
-            return 'Bloques predefinidos';
-    }
-});
-
 const timeToMinutes = (value: string): number | null => {
     const match = value.match(/^(\d{2}):(\d{2})$/);
     if (!match) {
@@ -140,16 +93,8 @@ const timeToMinutes = (value: string): number | null => {
     return hours * 60 + minutes;
 };
 
-const minutesToTime = (minutesTotal: number): string => {
-    const minutes = Math.max(0, Math.floor(minutesTotal));
-    const hh = String(Math.floor(minutes / 60)).padStart(2, '0');
-    const mm = String(minutes % 60).padStart(2, '0');
-
-    return `${hh}:${mm}`;
-};
-
 type SchedulePreviewRow = {
-    day: keyof OpeningHours;
+    day: DayKey;
     open: string;
     close: string;
     summary: string;
@@ -167,63 +112,11 @@ const schedulePreview = computed<SchedulePreviewRow[]>(() => {
             return { day, open, close, summary: 'Cerrado' };
         }
 
-        const step = Math.max(1, Number(formState.slot_step_minutes) || 1);
-
-        if (formState.booking_mode === 'predefined_blocks') {
-            const count = formState.predefined_blocks?.[day]?.length ?? 0;
-            return { day, open, close, summary: `${count} bloque(s)` };
-        }
-
-        if (formState.booking_mode === 'fixed_duration') {
-            const duration = Math.max(
-                1,
-                Number(formState.slot_duration_minutes) || 1,
-            );
-            const lastStart = closeMin - duration;
-            if (lastStart < openMin) {
-                return {
-                    day,
-                    open,
-                    close,
-                    summary: `Sin slots (duración ${duration} min)`,
-                };
-            }
-
-            const count = Math.floor((lastStart - openMin) / step) + 1;
-
-            return {
-                day,
-                open,
-                close,
-                summary: `${count} slot(s) — último inicio ${minutesToTime(
-                    lastStart,
-                )}`,
-            };
-        }
-
-        const minDuration = Math.max(
-            1,
-            Number(formState.min_duration_minutes) || 1,
-        );
-        const lastStart = closeMin - minDuration;
-        if (lastStart < openMin) {
-            return {
-                day,
-                open,
-                close,
-                summary: `Sin inicios (mín. ${minDuration} min)`,
-            };
-        }
-
-        const count = Math.floor((lastStart - openMin) / step) + 1;
-
         return {
             day,
             open,
             close,
-            summary: `${count} inicio(s) — último inicio ${minutesToTime(
-                lastStart,
-            )}`,
+            summary: 'Abierto',
         };
     });
 });
@@ -262,8 +155,7 @@ const leadTimePreview = computed(() => {
 <template>
     <Head title="Configuración" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-4 p-4">
+    <div class="flex flex-col gap-4 p-4">
             <div>
                 <h1 class="text-lg font-semibold">Configuración</h1>
                 <p class="text-sm text-muted-foreground">
@@ -279,7 +171,7 @@ const leadTimePreview = computed(() => {
             >
                 <div class="rounded-lg border border-border/60 p-4">
                     <div class="mb-3 text-sm font-medium">General</div>
-                    <div class="grid gap-4 md:grid-cols-2">
+                    <div class="grid gap-4 md:grid-cols-1">
                         <div class="grid gap-1">
                             <label class="text-sm" for="timezone"
                                 >Zona horaria</label
@@ -292,28 +184,6 @@ const leadTimePreview = computed(() => {
                             />
                             <InputError :message="errors.timezone" />
                         </div>
-
-                        <div class="grid gap-1">
-                            <label class="text-sm" for="booking_mode"
-                                >Modo de reserva</label
-                            >
-                            <select
-                                id="booking_mode"
-                                v-model="formState.booking_mode"
-                                class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                            >
-                                <option value="fixed_duration">
-                                    Duración fija
-                                </option>
-                                <option value="variable_duration">
-                                    Duración variable
-                                </option>
-                                <option value="predefined_blocks">
-                                    Bloques predefinidos
-                                </option>
-                            </select>
-                            <InputError :message="errors.booking_mode" />
-                        </div>
                     </div>
                 </div>
 
@@ -321,31 +191,29 @@ const leadTimePreview = computed(() => {
                     <div class="mb-3 text-sm font-medium">Reglas</div>
                     <div class="grid gap-4 md:grid-cols-3">
                         <div class="grid gap-1">
-                            <label class="text-sm" for="slot_duration_minutes"
-                                >Duración (min)</label
+                            <label class="text-sm" for="min_duration_minutes"
+                                >Duración mínima (min)</label
                             >
                             <input
-                                id="slot_duration_minutes"
-                                v-model.number="formState.slot_duration_minutes"
+                                id="min_duration_minutes"
+                                v-model.number="formState.min_duration_minutes"
                                 type="number"
                                 class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                             />
-                            <InputError
-                                :message="errors.slot_duration_minutes"
-                            />
+                            <InputError :message="errors.min_duration_minutes" />
                         </div>
 
                         <div class="grid gap-1">
-                            <label class="text-sm" for="slot_step_minutes"
-                                >Paso (min)</label
+                            <label class="text-sm" for="max_duration_minutes"
+                                >Duración máxima (min)</label
                             >
                             <input
-                                id="slot_step_minutes"
-                                v-model.number="formState.slot_step_minutes"
+                                id="max_duration_minutes"
+                                v-model.number="formState.max_duration_minutes"
                                 type="number"
                                 class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                             />
-                            <InputError :message="errors.slot_step_minutes" />
+                            <InputError :message="errors.max_duration_minutes" />
                         </div>
 
                         <div class="grid gap-1">
@@ -440,40 +308,6 @@ const leadTimePreview = computed(() => {
                             <InputError :message="errors.cancel_cutoff_hours" />
                         </div>
                     </div>
-
-                    <div
-                        class="mt-4 grid gap-4 md:grid-cols-2"
-                        v-if="formState.booking_mode === 'variable_duration'"
-                    >
-                        <div class="grid gap-1">
-                            <label class="text-sm" for="min_duration_minutes"
-                                >Duración mínima (min)</label
-                            >
-                            <input
-                                id="min_duration_minutes"
-                                v-model.number="formState.min_duration_minutes"
-                                type="number"
-                                class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                            />
-                            <InputError
-                                :message="errors.min_duration_minutes"
-                            />
-                        </div>
-                        <div class="grid gap-1">
-                            <label class="text-sm" for="max_duration_minutes"
-                                >Duración máxima (min)</label
-                            >
-                            <input
-                                id="max_duration_minutes"
-                                v-model.number="formState.max_duration_minutes"
-                                type="number"
-                                class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                            />
-                            <InputError
-                                :message="errors.max_duration_minutes"
-                            />
-                        </div>
-                    </div>
                 </div>
 
                 <div class="rounded-lg border border-border/60 p-4">
@@ -520,65 +354,34 @@ const leadTimePreview = computed(() => {
                     </div>
                 </div>
 
-                <div
-                    v-if="formState.booking_mode === 'predefined_blocks'"
-                    class="rounded-lg border border-border/60 p-4"
-                >
-                    <div class="mb-3 text-sm font-medium">
-                        Bloques predefinidos
-                    </div>
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div
-                            v-for="day in days"
-                            :key="day"
-                            class="rounded-md border border-border/60 p-3"
-                        >
-                            <div class="mb-2 flex items-center justify-between">
-                                <div class="text-sm font-medium">
-                                    {{ dayLabels[day] }}
-                                </div>
-                                <button
-                                    type="button"
-                                    class="text-xs underline underline-offset-4"
-                                    @click="addBlock(day)"
-                                >
-                                    Agregar
-                                </button>
-                            </div>
-                            <div class="grid gap-2">
-                                <div
-                                    v-for="(block, i) in formState
-                                        .predefined_blocks[day]"
-                                    :key="i"
-                                    class="flex items-center gap-2"
-                                >
-                                    <input
-                                        v-model="block.start"
-                                        type="time"
-                                        class="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm"
-                                    />
-                                    <input
-                                        v-model="block.end"
-                                        type="time"
-                                        class="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm"
-                                    />
-                                    <button
-                                        type="button"
-                                        class="text-xs text-muted-foreground underline underline-offset-4"
-                                        @click="removeBlock(day, i)"
-                                    >
-                                        Quitar
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <InputError :message="errors.predefined_blocks" />
-                </div>
-
                 <div class="rounded-lg border border-border/60 p-4">
                     <div class="mb-3 text-sm font-medium">Notificaciones</div>
                     <div class="grid gap-4 md:grid-cols-2">
+                        <div class="md:col-span-2">
+                            <div class="flex items-center gap-2">
+                                <input
+                                    id="email_notifications_enabled"
+                                    v-model="formState.email_notifications_enabled"
+                                    type="checkbox"
+                                    class="h-4 w-4"
+                                />
+                                <label
+                                    class="text-sm"
+                                    for="email_notifications_enabled"
+                                >
+                                    Habilitar envío de correos
+                                </label>
+                                <InputError
+                                    :message="errors.email_notifications_enabled"
+                                />
+                            </div>
+                            <p
+                                v-if="!emailsEnabled"
+                                class="mt-2 text-xs text-muted-foreground"
+                            >
+                                El envío de correos está deshabilitado. Los eventos se registran en el sistema, pero no se enviarán emails.
+                            </p>
+                        </div>
                         <div class="grid gap-1">
                             <label class="text-sm" for="notify_to"
                                 >Emails admin (TO)</label
@@ -589,6 +392,7 @@ const leadTimePreview = computed(() => {
                                 rows="4"
                                 class="rounded-md border border-input bg-background px-3 py-2 text-sm"
                                 placeholder="uno@ejemplo.com"
+                                :disabled="!emailsEnabled"
                             />
                             <InputError
                                 :message="errors['notify_admin_emails.to']"
@@ -603,6 +407,7 @@ const leadTimePreview = computed(() => {
                                 v-model="notifyCc"
                                 rows="4"
                                 class="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                :disabled="!emailsEnabled"
                             />
                             <InputError
                                 :message="errors['notify_admin_emails.cc']"
@@ -617,6 +422,7 @@ const leadTimePreview = computed(() => {
                                 v-model="notifyBcc"
                                 rows="3"
                                 class="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                :disabled="!emailsEnabled"
                             />
                             <InputError
                                 :message="errors['notify_admin_emails.bcc']"
@@ -628,6 +434,7 @@ const leadTimePreview = computed(() => {
                                 v-model="formState.notify_student_on_approval"
                                 type="checkbox"
                                 class="h-4 w-4"
+                                :disabled="!emailsEnabled"
                             />
                             <label
                                 class="text-sm"
@@ -647,10 +454,13 @@ const leadTimePreview = computed(() => {
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="rounded-md border border-border/60 p-3">
                             <div class="text-xs text-muted-foreground">
-                                Modo de reserva
+                                Duración
                             </div>
                             <div class="text-sm font-medium">
-                                {{ bookingModeLabel }}
+                                {{ formState.min_duration_minutes }}–{{
+                                    formState.max_duration_minutes
+                                }}
+                                min
                             </div>
                             <div class="mt-2 text-xs text-muted-foreground">
                                 Ventana de reserva (según zona horaria)
@@ -708,6 +518,5 @@ const leadTimePreview = computed(() => {
                     </button>
                 </div>
             </Form>
-        </div>
-    </AppLayout>
+    </div>
 </template>

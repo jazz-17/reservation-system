@@ -11,4 +11,9 @@ class ReservationPolicy
     {
         return $user->isAdmin() || $user->id === $reservation->user_id;
     }
+
+    public function viewPdf(User $user, Reservation $reservation): bool
+    {
+        return $user->isAdmin() || $user->id === $reservation->user_id;
+    }
 }

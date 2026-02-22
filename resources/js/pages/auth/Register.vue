@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,77 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
+
+defineOptions({ layout: false });
 import { store } from '@/routes/register';
+
+type ProfessionalSchool = {
+    id: number;
+    faculty_id: number;
+    name: string;
+    base_year_min: number;
+    base_year_max: number;
+};
+
+type Faculty = {
+    id: number;
+    name: string;
+    professional_schools: ProfessionalSchool[];
+};
+
+const props = defineProps<{
+    faculties: Faculty[];
+}>();
+
+const selectedFacultyId = ref<string>(props.faculties[0] ? String(props.faculties[0].id) : '');
+const selectedSchoolId = ref<string>('');
+const selectedBaseYear = ref<string>('');
+
+const availableSchools = computed<ProfessionalSchool[]>(() => {
+    const facultyId = Number(selectedFacultyId.value);
+    if (!Number.isFinite(facultyId) || facultyId <= 0) {
+        return [];
+    }
+
+    const faculty = props.faculties.find((f) => f.id === facultyId);
+    return faculty?.professional_schools ?? [];
+});
+
+const selectedSchool = computed<ProfessionalSchool | null>(() => {
+    const schoolId = Number(selectedSchoolId.value);
+    if (!Number.isFinite(schoolId) || schoolId <= 0) {
+        return null;
+    }
+
+    return availableSchools.value.find((s) => s.id === schoolId) ?? null;
+});
+
+const baseYears = computed<number[]>(() => {
+    if (!selectedSchool.value) {
+        return [];
+    }
+
+    const years: number[] = [];
+    for (let y = selectedSchool.value.base_year_min; y <= selectedSchool.value.base_year_max; y += 1) {
+        years.push(y);
+    }
+
+    return years;
+});
+
+const baseLabel = (year: number): string => {
+    const yy = String(year % 100).padStart(2, '0');
+    return `B${yy}`;
+};
+
+watch(selectedFacultyId, () => {
+    selectedSchoolId.value = '';
+    selectedBaseYear.value = '';
+});
+
+watch(selectedSchoolId, () => {
+    selectedBaseYear.value = '';
+});
 </script>
 
 <template>
@@ -58,33 +129,79 @@ import { store } from '@/routes/register';
 
                 <div class="grid gap-6 md:grid-cols-2">
                     <div class="grid gap-2">
-                        <Label for="professional_school"
-                            >Escuela profesional</Label
-                        >
-                        <Input
-                            id="professional_school"
-                            type="text"
-                            required
+                        <Label for="faculty">Facultad</Label>
+                        <select
+                            id="faculty"
+                            v-model="selectedFacultyId"
                             :tabindex="3"
-                            autocomplete="organization"
-                            name="professional_school"
-                            placeholder="E.P. Sistemas"
-                        />
-                        <InputError :message="errors.professional_school" />
+                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                        >
+                            <option value="" disabled>
+                                Selecciona una facultad
+                            </option>
+                            <option
+                                v-for="f in props.faculties"
+                                :key="f.id"
+                                :value="String(f.id)"
+                            >
+                                {{ f.name }}
+                            </option>
+                        </select>
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="base">Base</Label>
-                        <Input
-                            id="base"
-                            type="text"
+                        <Label for="professional_school_id"
+                            >Escuela profesional</Label
+                        >
+                        <select
+                            id="professional_school_id"
+                            v-model="selectedSchoolId"
+                            name="professional_school_id"
                             required
                             :tabindex="4"
-                            name="base"
-                            placeholder="B22"
+                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                            :disabled="selectedFacultyId === ''"
+                        >
+                            <option value="" disabled>
+                                Selecciona una escuela
+                            </option>
+                            <option
+                                v-for="s in availableSchools"
+                                :key="s.id"
+                                :value="String(s.id)"
+                            >
+                                {{ s.name }}
+                            </option>
+                        </select>
+                        <InputError
+                            :message="errors.professional_school_id"
                         />
-                        <InputError :message="errors.base" />
                     </div>
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="base_year">Base (año)</Label>
+                    <select
+                        id="base_year"
+                        v-model="selectedBaseYear"
+                        name="base_year"
+                        required
+                        :tabindex="5"
+                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                        :disabled="selectedSchool === null"
+                    >
+                        <option value="" disabled>
+                            Selecciona una base
+                        </option>
+                        <option
+                            v-for="y in baseYears"
+                            :key="y"
+                            :value="String(y)"
+                        >
+                            {{ baseLabel(y) }}
+                        </option>
+                    </select>
+                    <InputError :message="errors.base_year" />
                 </div>
 
                 <div class="grid gap-2">
@@ -92,7 +209,7 @@ import { store } from '@/routes/register';
                     <Input
                         id="phone"
                         type="tel"
-                        :tabindex="5"
+                        :tabindex="6"
                         autocomplete="tel"
                         name="phone"
                         placeholder="9XXXXXXXX"
@@ -106,7 +223,7 @@ import { store } from '@/routes/register';
                         id="email"
                         type="email"
                         required
-                        :tabindex="6"
+                        :tabindex="7"
                         autocomplete="email"
                         name="email"
                         placeholder="correo@univ.edu"
@@ -120,7 +237,7 @@ import { store } from '@/routes/register';
                         id="password"
                         type="password"
                         required
-                        :tabindex="7"
+                        :tabindex="8"
                         autocomplete="new-password"
                         name="password"
                         placeholder="Contraseña"
@@ -136,7 +253,7 @@ import { store } from '@/routes/register';
                         id="password_confirmation"
                         type="password"
                         required
-                        :tabindex="8"
+                        :tabindex="9"
                         autocomplete="new-password"
                         name="password_confirmation"
                         placeholder="Confirmar contraseña"
@@ -147,7 +264,7 @@ import { store } from '@/routes/register';
                 <Button
                     type="submit"
                     class="mt-2 w-full"
-                    tabindex="9"
+                    tabindex="10"
                     :disabled="processing"
                     data-test="register-user-button"
                 >
@@ -161,7 +278,7 @@ import { store } from '@/routes/register';
                 <TextLink
                     :href="login()"
                     class="underline underline-offset-4"
-                    :tabindex="10"
+                    :tabindex="11"
                     >Iniciar sesión</TextLink
                 >
             </div>

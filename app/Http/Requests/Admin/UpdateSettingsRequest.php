@@ -2,10 +2,8 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Models\Enums\BookingMode;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateSettingsRequest extends FormRequest
 {
@@ -28,10 +26,6 @@ class UpdateSettingsRequest extends FormRequest
 
         $rules = [
             'timezone' => ['required', 'string', 'max:64'],
-            'booking_mode' => ['required', Rule::in(array_map(fn (BookingMode $m) => $m->value, BookingMode::cases()))],
-
-            'slot_duration_minutes' => ['required', 'integer', 'min:1', 'max:720'],
-            'slot_step_minutes' => ['required', 'integer', 'min:1', 'max:180'],
             'min_duration_minutes' => ['required', 'integer', 'min:1', 'max:720'],
             'max_duration_minutes' => ['required', 'integer', 'min:1', 'max:720'],
 
@@ -42,11 +36,11 @@ class UpdateSettingsRequest extends FormRequest
             'pending_expiration_hours' => ['required', 'integer', 'min:1', 'max:168'],
             'cancel_cutoff_hours' => ['required', 'integer', 'min:0', 'max:168'],
 
+            'email_notifications_enabled' => ['required', 'boolean'],
             'notify_student_on_approval' => ['required', 'boolean'],
             'pdf_template' => ['required', 'string', 'max:64'],
 
             'opening_hours' => ['required', 'array'],
-            'predefined_blocks' => ['present', 'array'],
 
             'notify_admin_emails' => ['required', 'array'],
             'notify_admin_emails.to' => ['present', 'array'],
@@ -61,10 +55,6 @@ class UpdateSettingsRequest extends FormRequest
             $rules["opening_hours.{$day}"] = ['required', 'array'];
             $rules["opening_hours.{$day}.open"] = ['required', 'date_format:H:i'];
             $rules["opening_hours.{$day}.close"] = ['required', 'date_format:H:i'];
-
-            $rules["predefined_blocks.{$day}"] = ['present', 'array'];
-            $rules["predefined_blocks.{$day}.*.start"] = ['required', 'date_format:H:i'];
-            $rules["predefined_blocks.{$day}.*.end"] = ['required', 'date_format:H:i'];
         }
 
         return $rules;

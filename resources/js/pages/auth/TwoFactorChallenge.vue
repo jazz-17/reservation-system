@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/input-otp';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import { store } from '@/routes/two-factor/login';
+
+defineOptions({ layout: false });
 import type { TwoFactorConfigContent } from '@/types';
 
 const authConfigContent = computed<TwoFactorConfigContent>(() => {

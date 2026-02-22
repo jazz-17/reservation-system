@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
 import type { CalendarOptions, EventInput, EventSourceFuncArg } from '@fullcalendar/core';
-import FullCalendar from '@fullcalendar/vue3';
+import esLocale from '@fullcalendar/core/locales/es';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import esLocale from '@fullcalendar/core/locales/es';
+import FullCalendar from '@fullcalendar/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { fetchJson } from '@/lib/http';
 import { availability } from '@/routes/api/public';
+import { create as createReservation } from '@/routes/reservations';
+
+defineOptions({ layout: PublicLayout });
 
 type CalendarEvent = EventInput & {
     extendedProps?: {
@@ -40,6 +43,13 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     displayEventTime: false,
     fixedWeekCount: false,
     dayMaxEvents: true,
+    dateClick: (info) => {
+        router.visit(
+            createReservation.url({
+                query: { date: info.dateStr },
+            }),
+        );
+    },
     events: async (
         info: EventSourceFuncArg,
         success: (events: EventInput[]) => void,
@@ -69,50 +79,48 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 <template>
     <Head title="Calendario" />
 
-    <PublicLayout>
-        <div class="flex flex-col gap-4">
-            <div class="flex flex-col gap-1">
-                <h1 class="text-lg font-semibold">Calendario</h1>
-                <p class="text-sm text-muted-foreground">
-                    Vista pública (solo ocupado / bloqueado).
-                </p>
+    <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+            <h1 class="text-lg font-semibold">Calendario</h1>
+            <p class="text-sm text-muted-foreground">
+                Vista pública (solo ocupado / bloqueado).
+            </p>
+        </div>
+
+        <div
+            class="flex flex-wrap items-center gap-3 text-sm text-muted-foreground"
+        >
+            <div class="flex items-center gap-2">
+                <span class="h-2.5 w-2.5 rounded-sm bg-amber-500"></span>
+                Ocupado
             </div>
-
-            <div
-                class="flex flex-wrap items-center gap-3 text-sm text-muted-foreground"
-            >
-                <div class="flex items-center gap-2">
-                    <span class="h-2.5 w-2.5 rounded-sm bg-amber-500"></span>
-                    Ocupado
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="h-2.5 w-2.5 rounded-sm bg-slate-500"></span>
-                    Bloqueado
-                </div>
-                <div class="ml-auto text-xs">
-                    Zona horaria: {{ props.timezone }}
-                </div>
+            <div class="flex items-center gap-2">
+                <span class="h-2.5 w-2.5 rounded-sm bg-slate-500"></span>
+                Bloqueado
             </div>
-
-            <div
-                v-if="loadError"
-                class="rounded-lg border border-border/60 p-6 text-sm text-destructive"
-            >
-                No se pudo cargar el calendario.
-            </div>
-
-            <div class="calendar rounded-lg border border-border/60 p-2">
-                <div
-                    v-if="isLoading"
-                    class="px-2 pb-2 text-sm text-muted-foreground"
-                >
-                    Cargando…
-                </div>
-
-                <FullCalendar :options="calendarOptions" />
+            <div class="ml-auto text-xs">
+                Zona horaria: {{ props.timezone }}
             </div>
         </div>
-    </PublicLayout>
+
+        <div
+            v-if="loadError"
+            class="rounded-lg border border-border/60 p-6 text-sm text-destructive"
+        >
+            No se pudo cargar el calendario.
+        </div>
+
+        <div class="calendar rounded-lg border border-border/60 p-2">
+            <div
+                v-if="isLoading"
+                class="px-2 pb-2 text-sm text-muted-foreground"
+            >
+                Cargando…
+            </div>
+
+            <FullCalendar :options="calendarOptions" />
+        </div>
+    </div>
 </template>
 
 <style scoped>

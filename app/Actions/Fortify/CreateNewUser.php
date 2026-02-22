@@ -5,10 +5,11 @@ namespace App\Actions\Fortify;
 use App\Actions\Audit\Audit;
 use App\Concerns\PasswordValidationRules;
 use App\Models\AllowListEntry;
+use App\Models\ProfessionalSchool;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
@@ -20,17 +21,23 @@ class CreateNewUser implements CreatesNewUsers
     /**
      * Validate and create a newly registered user.
      *
-     * @param  array<string, string>  $input
+     * @param  array<string, mixed>  $input
      */
     public function create(array $input): User
     {
         $normalizedEmail = Str::lower((string) ($input['email'] ?? ''));
 
+        $selectedSchoolId = (int) ($input['professional_school_id'] ?? 0);
+
         $validator = Validator::make($input, [
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
-            'professional_school' => ['required', 'string', 'max:255'],
-            'base' => ['required', 'string', 'max:255'],
+            'professional_school_id' => [
+                'required',
+                'integer',
+                Rule::exists(ProfessionalSchool::class, 'id')->where('active', true),
+            ],
+            'base_year' => ['required', 'integer', 'min:2000', 'max:2100'],
             'phone' => ['nullable', 'string', 'max:30'],
             'email' => [
                 'required',
@@ -49,6 +56,28 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ]);
 
+        $school = null;
+        $validator->after(function ($validator) use ($selectedSchoolId, $input, &$school): void {
+            if ($selectedSchoolId <= 0) {
+                return;
+            }
+
+            $school = ProfessionalSchool::query()
+                ->with(['faculty:id,active'])
+                ->find($selectedSchoolId);
+
+            if ($school === null || ! $school->active || ! $school->faculty?->active) {
+                $validator->errors()->add('professional_school_id', 'La escuela seleccionada no está disponible.');
+
+                return;
+            }
+
+            $baseYear = (int) ($input['base_year'] ?? 0);
+            if ($baseYear < $school->base_year_min || $baseYear > $school->base_year_max) {
+                $validator->errors()->add('base_year', 'La base seleccionada no está disponible para la escuela.');
+            }
+        });
+
         try {
             $validator->validate();
         } catch (ValidationException $exception) {
@@ -66,8 +95,8 @@ class CreateNewUser implements CreatesNewUsers
             'name' => "{$input['first_name']} {$input['last_name']}",
             'first_name' => $input['first_name'],
             'last_name' => $input['last_name'],
-            'professional_school' => $input['professional_school'],
-            'base' => $input['base'],
+            'professional_school_id' => $selectedSchoolId,
+            'base_year' => (int) $input['base_year'],
             'phone' => $input['phone'] ?? null,
             'email' => $normalizedEmail,
             'password' => $input['password'],

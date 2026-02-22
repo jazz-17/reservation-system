@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { computed } from 'vue';
+import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
+import StatusBadge from '@/components/admin/StatusBadge.vue';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
+import { formatDateTime } from '@/lib/formatters';
 import { fetchJson } from '@/lib/http';
 import { reservations as studentReservations } from '@/routes/api/student';
 import {
@@ -9,25 +14,27 @@ import {
     create as createReservation,
     index as reservationsIndex,
 } from '@/routes/reservations';
-import { type BreadcrumbItem } from '@/types';
-import { computed } from 'vue';
+import { show as reservationPdf } from '@/routes/reservations/pdf';
+import type { ReservationStatus } from '@/types/admin';
 
 type Reservation = {
     id: number;
-    status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+    status: ReservationStatus;
     starts_at: string;
     ends_at: string;
     decision_reason?: string | null;
     cancellation_reason?: string | null;
 };
 
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Mis reservas', href: reservationsIndex().url },
-];
+useBreadcrumbs([{ title: 'Mis reservas', href: reservationsIndex().url }]);
 
 const queryClient = useQueryClient();
 
-const query = useQuery({
+const {
+    isLoading,
+    isError,
+    data: reservationsData,
+} = useQuery({
     queryKey: ['student-reservations'],
     queryFn: () =>
         fetchJson<{ data: Reservation[] }>(studentReservations.url()).then(
@@ -35,28 +42,18 @@ const query = useQuery({
         ),
 });
 
-const formatDateTime = (iso: string): string => {
-    const d = new Date(iso);
-    return new Intl.DateTimeFormat('es-PE', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-    }).format(d);
-};
+const reservations = computed<Reservation[]>(() => reservationsData.value ?? []);
 
-const statusLabel = (status: Reservation['status']): string => {
-    switch (status) {
-        case 'pending':
-            return 'Pendiente';
-        case 'approved':
-            return 'Aprobada';
-        case 'rejected':
-            return 'Rechazada';
-        case 'cancelled':
-            return 'Cancelada';
+const reasonLabel = (r: Reservation): string => {
+    if (r.status === 'rejected') {
+        return r.decision_reason?.trim() || '—';
     }
+
+    if (r.status === 'cancelled') {
+        return r.cancellation_reason?.trim() || '—';
+    }
+
+    return '—';
 };
 
 const isHistorical = (r: Reservation): boolean => {
@@ -68,18 +65,14 @@ const isHistorical = (r: Reservation): boolean => {
 };
 
 const activeReservations = computed(() =>
-    (query.data ?? []).filter((r) => !isHistorical(r)),
+    reservations.value.filter((r) => !isHistorical(r)),
 );
 
 const historicalReservations = computed(() =>
-    (query.data ?? []).filter((r) => isHistorical(r)),
+    reservations.value.filter((r) => isHistorical(r)),
 );
 
 const cancel = (reservationId: number): void => {
-    if (!confirm('¿Cancelar esta reserva?')) {
-        return;
-    }
-
     router.post(
         cancelReservation(reservationId).url,
         {},
@@ -97,8 +90,7 @@ const cancel = (reservationId: number): void => {
 <template>
     <Head title="Mis reservas" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-4 p-4">
+    <div class="flex flex-col gap-4 p-4">
             <div class="flex items-center justify-between gap-3">
                 <h1 class="text-lg font-semibold">Mis reservas</h1>
                 <Link
@@ -110,14 +102,38 @@ const cancel = (reservationId: number): void => {
             </div>
 
             <div
-                v-if="query.isLoading"
-                class="rounded-lg border border-border/60 p-6 text-sm text-muted-foreground"
+                v-if="isLoading"
+                class="overflow-hidden rounded-lg border border-border/60"
             >
-                Cargando…
+                <div class="border-b border-border/60 px-4 py-3">
+                    <Skeleton class="h-4 w-28" />
+                </div>
+                <div
+                    v-for="i in 3"
+                    :key="i"
+                    class="flex items-center gap-4 border-t border-border/60 px-4 py-3 first:border-t-0"
+                >
+                    <Skeleton class="h-4 w-20" />
+                    <Skeleton class="h-4 w-36" />
+                    <Skeleton class="h-4 w-36" />
+                    <Skeleton class="ml-auto h-7 w-16" />
+                </div>
+                <div class="border-y border-border/60 px-4 py-3">
+                    <Skeleton class="h-4 w-16" />
+                </div>
+                <div
+                    v-for="i in 2"
+                    :key="i"
+                    class="flex items-center gap-4 border-t border-border/60 px-4 py-3 first:border-t-0"
+                >
+                    <Skeleton class="h-4 w-20" />
+                    <Skeleton class="h-4 w-36" />
+                    <Skeleton class="h-4 w-36" />
+                </div>
             </div>
 
             <div
-                v-else-if="query.isError"
+                v-else-if="isError"
                 class="rounded-lg border border-border/60 p-6 text-sm text-destructive"
             >
                 No se pudieron cargar tus reservas.
@@ -146,7 +162,7 @@ const cancel = (reservationId: number): void => {
                             class="border-t border-border/60"
                         >
                             <td class="px-4 py-3">
-                                {{ statusLabel(r.status) }}
+                                <StatusBadge :status="r.status" />
                             </td>
                             <td class="px-4 py-3">
                                 {{ formatDateTime(r.starts_at) }}
@@ -155,17 +171,37 @@ const cancel = (reservationId: number): void => {
                                 {{ formatDateTime(r.ends_at) }}
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <button
-                                    v-if="
-                                        r.status === 'pending' ||
-                                        r.status === 'approved'
-                                    "
-                                    type="button"
-                                    class="rounded-md border border-border/60 px-3 py-1.5 text-xs"
-                                    @click="cancel(r.id)"
-                                >
-                                    Cancelar
-                                </button>
+                                <div class="flex justify-end gap-2">
+                                    <a
+                                        v-if="r.status === 'approved'"
+                                        :href="reservationPdf(r.id).url"
+                                        class="rounded-md border border-border/60 px-3 py-1.5 text-xs"
+                                        target="_blank"
+                                        rel="noopener"
+                                    >
+                                        Descargar PDF
+                                    </a>
+                                    <ConfirmDialog
+                                        v-if="
+                                            r.status === 'pending' ||
+                                            r.status === 'approved'
+                                        "
+                                        title="¿Cancelar esta reserva?"
+                                        description="Esta acción no se puede deshacer."
+                                        confirm-label="Cancelar reserva"
+                                        variant="destructive"
+                                        @confirm="cancel(r.id)"
+                                    >
+                                        <template #trigger>
+                                            <button
+                                                type="button"
+                                                class="rounded-md border border-border/60 px-3 py-1.5 text-xs"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </template>
+                                    </ConfirmDialog>
+                                </div>
                             </td>
                         </tr>
                         <tr v-if="activeReservations.length === 0">
@@ -188,6 +224,8 @@ const cancel = (reservationId: number): void => {
                             <th class="px-4 py-3">Estado</th>
                             <th class="px-4 py-3">Inicio</th>
                             <th class="px-4 py-3">Fin</th>
+                            <th class="px-4 py-3">Motivo</th>
+                            <th class="px-4 py-3"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -197,7 +235,7 @@ const cancel = (reservationId: number): void => {
                             class="border-t border-border/60"
                         >
                             <td class="px-4 py-3">
-                                {{ statusLabel(r.status) }}
+                                <StatusBadge :status="r.status" />
                             </td>
                             <td class="px-4 py-3">
                                 {{ formatDateTime(r.starts_at) }}
@@ -205,11 +243,25 @@ const cancel = (reservationId: number): void => {
                             <td class="px-4 py-3">
                                 {{ formatDateTime(r.ends_at) }}
                             </td>
+                            <td class="px-4 py-3">
+                                {{ reasonLabel(r) }}
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <a
+                                    v-if="r.status === 'approved'"
+                                    :href="reservationPdf(r.id).url"
+                                    class="rounded-md border border-border/60 px-3 py-1.5 text-xs"
+                                    target="_blank"
+                                    rel="noopener"
+                                >
+                                    PDF
+                                </a>
+                            </td>
                         </tr>
                         <tr v-if="historicalReservations.length === 0">
                             <td
                                 class="px-4 py-8 text-center text-muted-foreground"
-                                colspan="3"
+                                colspan="5"
                             >
                                 Sin historial.
                             </td>
@@ -217,6 +269,5 @@ const cancel = (reservationId: number): void => {
                     </tbody>
                 </table>
             </div>
-        </div>
-    </AppLayout>
+    </div>
 </template>

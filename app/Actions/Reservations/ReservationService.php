@@ -6,7 +6,6 @@ use App\Actions\Audit\Audit;
 use App\Actions\Settings\SettingsService;
 use App\Jobs\GenerateReservationPdf;
 use App\Jobs\SendReservationEmail;
-use App\Models\Enums\BookingMode;
 use App\Models\Enums\ReservationArtifactKind;
 use App\Models\Enums\ReservationArtifactStatus;
 use App\Models\Enums\ReservationStatus;
@@ -14,6 +13,7 @@ use App\Models\Reservation;
 use App\Models\ReservationArtifact;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -25,32 +25,26 @@ class ReservationService
         private readonly ReservationRulesService $rules,
     ) {}
 
-    public function createPending(User $user, CarbonImmutable $startsAtUtc, ?CarbonImmutable $endsAtUtc): Reservation
+    public function createPending(User $user, CarbonImmutable $startsAtUtc, CarbonImmutable $endsAtUtc): Reservation
     {
-        $mode = BookingMode::from($this->settings->getString('booking_mode'));
-
-        $computedEndsAtUtc = match ($mode) {
-            BookingMode::FixedDuration => $startsAtUtc->addMinutes($this->settings->getInt('slot_duration_minutes')),
-            default => $endsAtUtc,
-        };
-
-        if ($computedEndsAtUtc === null) {
+        if ($user->professional_school_id === null || $user->base_year === null) {
             throw ValidationException::withMessages([
-                'ends_at' => 'Debes indicar una hora de fin.',
+                'reservation' => 'Completa tu perfil (escuela/base) para solicitar una reserva.',
             ]);
         }
 
-        $this->rules->validateForCreation($user, $startsAtUtc, $computedEndsAtUtc);
-
         try {
-            return DB::transaction(function () use ($user, $startsAtUtc, $computedEndsAtUtc): Reservation {
+            return DB::transaction(function () use ($user, $startsAtUtc, $endsAtUtc): Reservation {
+                $this->acquireCreationLocks($user, $startsAtUtc);
+                $this->rules->validateForCreation($user, $startsAtUtc, $endsAtUtc);
+
                 $reservation = Reservation::query()->create([
                     'user_id' => $user->id,
                     'status' => ReservationStatus::Pending,
                     'starts_at' => $startsAtUtc,
-                    'ends_at' => $computedEndsAtUtc,
-                    'professional_school' => (string) $user->professional_school,
-                    'base' => (string) $user->base,
+                    'ends_at' => $endsAtUtc,
+                    'professional_school_id' => (int) $user->professional_school_id,
+                    'base_year' => (int) $user->base_year,
                 ]);
 
                 Audit::record('reservation.created', actor: $user, subject: $reservation, metadata: [
@@ -210,6 +204,10 @@ class ReservationService
 
     private function enqueueEmails(Reservation $reservation, string $event): void
     {
+        if (! $this->settings->getBool('email_notifications_enabled')) {
+            return;
+        }
+
         $notifyAdmin = $this->settings->get('notify_admin_emails');
         $adminRecipients = is_array($notifyAdmin) ? $notifyAdmin : ['to' => []];
 
@@ -271,5 +269,24 @@ class ReservationService
         DB::afterCommit(function () use ($studentArtifact): void {
             SendReservationEmail::dispatch($studentArtifact->id);
         });
+    }
+
+    private function acquireCreationLocks(User $user, CarbonImmutable $startsAtUtc): void
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
+        DB::select('select pg_advisory_xact_lock(hashtextextended(?, 0))', [
+            "reservation:user:{$user->id}",
+        ]);
+
+        $timezone = $this->settings->getString('timezone');
+        $startsAtLocal = $startsAtUtc->setTimezone($timezone);
+        $weekStartLocal = $startsAtLocal->startOfWeek(CarbonInterface::MONDAY)->toDateString();
+
+        DB::select('select pg_advisory_xact_lock(hashtextextended(?, 0))', [
+            "reservation:quota:school:{$user->professional_school_id}:base:{$user->base_year}:week:{$weekStartLocal}",
+        ]);
     }
 }

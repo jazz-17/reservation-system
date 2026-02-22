@@ -2,6 +2,8 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { dashboard, login, register } from '@/routes';
 
+defineOptions({ layout: false });
+
 withDefaults(
     defineProps<{
         canRegister: boolean;

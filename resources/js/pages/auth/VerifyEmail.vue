@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import { logout } from '@/routes';
+
+defineOptions({ layout: false });
 import { send } from '@/routes/verification';
 
 defineProps<{

@@ -20,9 +20,6 @@ class SettingsDefaults
                 'sat' => ['open' => '08:00', 'close' => '22:00'],
                 'sun' => ['open' => '08:00', 'close' => '22:00'],
             ],
-            'booking_mode' => 'fixed_duration',
-            'slot_duration_minutes' => 60,
-            'slot_step_minutes' => 30,
             'min_duration_minutes' => 60,
             'max_duration_minutes' => 120,
             'lead_time_min_hours' => 2,
@@ -31,6 +28,7 @@ class SettingsDefaults
             'weekly_quota_per_school_base' => 2,
             'pending_expiration_hours' => 24,
             'cancel_cutoff_hours' => 2,
+            'email_notifications_enabled' => false,
             'notify_admin_emails' => [
                 'to' => [],
                 'cc' => [],
@@ -38,16 +36,6 @@ class SettingsDefaults
             ],
             'notify_student_on_approval' => true,
             'pdf_template' => 'default',
-            'predefined_blocks' => [
-                'mon' => [],
-                'tue' => [],
-                'wed' => [],
-                'thu' => [],
-                'fri' => [],
-                'sat' => [],
-                'sun' => [],
-            ],
         ];
     }
 }
-

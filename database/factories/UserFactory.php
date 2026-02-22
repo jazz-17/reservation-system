@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Enums\UserRole;
+use App\Models\ProfessionalSchool;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -26,13 +27,15 @@ class UserFactory extends Factory
     {
         $firstName = fake()->firstName();
         $lastName = fake()->lastName();
+        $min = 2018;
+        $max = max($min, (int) now()->year);
 
         return [
             'name' => "{$firstName} {$lastName}",
             'first_name' => $firstName,
             'last_name' => $lastName,
-            'professional_school' => fake()->randomElement(['E.P. Sistemas', 'E.P. Industrial', 'E.P. Software']),
-            'base' => fake()->randomElement(['B22', 'B23', 'B24']),
+            'professional_school_id' => ProfessionalSchool::factory(),
+            'base_year' => fake()->numberBetween($min, $max),
             'phone' => fake()->optional()->numerify('9########'),
             'role' => UserRole::Student,
             'email' => fake()->unique()->safeEmail(),
