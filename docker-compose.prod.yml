@@ -26,6 +26,7 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    env_file: .env.production
     environment:
       POSTGRES_DB: ${DB_DATABASE:-reservation_system}
       POSTGRES_USER: ${DB_USERNAME:-postgres}
