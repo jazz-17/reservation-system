@@ -28,6 +28,7 @@ yarn-error.log
 /.zed
 database/database.sqlite
 
+DEPLOY.md
 AGENTS.md
 .codex
 GEMINI.md

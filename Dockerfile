@@ -32,6 +32,18 @@ WORKDIR /var/www/html
 RUN groupadd -g 1000 www && useradd -u 1000 -g www -m www
 
 # ============================================
+# Wayfinder stage: generate TypeScript types
+# ============================================
+FROM base AS wayfinder
+
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-interaction --optimize-autoloader
+
+COPY . .
+RUN composer dump-autoload --optimize \
+    && php artisan wayfinder:generate --with-form
+
+# ============================================
 # Node build stage (frontend assets)
 # ============================================
 FROM node:22-slim AS node-build
@@ -42,6 +54,11 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+COPY --from=wayfinder /var/www/html/resources/js/actions resources/js/actions
+COPY --from=wayfinder /var/www/html/resources/js/routes resources/js/routes
+COPY --from=wayfinder /var/www/html/resources/js/wayfinder resources/js/wayfinder
+
+ENV VITE_SKIP_WAYFINDER=1
 RUN npm run build
 
 # ============================================

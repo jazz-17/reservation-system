@@ -330,12 +330,14 @@ watch(selectedDate, (date) => {
                 </div>
 
                 <div class="calendar rounded-lg border border-border/60 p-2">
-                    <Skeleton v-if="isLoading" class="mx-2 mb-2 h-1" />
+                    <Skeleton v-if="isLoading" class="h-[560px] rounded-md" />
 
-                    <FullCalendar
-                        ref="calendarRef"
-                        :options="calendarOptions"
-                    />
+                    <div :class="{ hidden: isLoading }">
+                        <FullCalendar
+                            ref="calendarRef"
+                            :options="calendarOptions"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -461,5 +463,36 @@ watch(selectedDate, (date) => {
 
 .calendar :deep(.fc .fc-button) {
     border-radius: 0.375rem;
+    background: var(--background);
+    border: 1px solid var(--border);
+    color: var(--foreground);
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.25rem 0.75rem;
+    transition:
+        background-color 0.15s,
+        color 0.15s;
+}
+
+.calendar :deep(.fc .fc-button:hover) {
+    background: var(--accent);
+    color: var(--accent-foreground);
+}
+
+.calendar :deep(.fc .fc-button:active),
+.calendar :deep(.fc .fc-button.fc-button-active) {
+    background: var(--accent);
+    color: var(--accent-foreground);
+}
+
+.calendar :deep(.fc .fc-button:disabled) {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.calendar :deep(.fc .fc-button:focus) {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
 }
 </style>

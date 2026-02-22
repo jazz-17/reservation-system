@@ -20,6 +20,7 @@ export default defineConfig({
         tailwindcss(),
         wayfinder({
             formVariants: true,
+            ...(process.env.VITE_SKIP_WAYFINDER ? { command: 'true' } : {}),
         }),
         vue({
             template: {
