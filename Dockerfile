@@ -87,3 +87,11 @@ USER www
 
 EXPOSE 9000
 CMD ["php-fpm"]
+
+# ============================================
+# Nginx stage (serves static files + proxies PHP)
+# ============================================
+FROM nginx:alpine AS nginx
+
+COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY --from=prod /var/www/html/public /var/www/html/public
