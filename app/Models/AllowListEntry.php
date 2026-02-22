@@ -17,6 +17,8 @@ class AllowListEntry extends Model
      */
     protected $fillable = [
         'email',
+        'professional_school_id',
+        'base_year',
         'import_batch_id',
         'imported_by',
     ];
@@ -31,5 +33,10 @@ class AllowListEntry extends Model
     public function importer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'imported_by');
+    }
+
+    public function professionalSchool(): BelongsTo
+    {
+        return $this->belongsTo(ProfessionalSchool::class);
     }
 }

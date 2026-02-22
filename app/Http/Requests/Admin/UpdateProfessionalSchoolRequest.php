@@ -5,10 +5,22 @@ namespace App\Http\Requests\Admin;
 use App\Models\ProfessionalSchool;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class UpdateProfessionalSchoolRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $code = $this->input('code');
+
+        if (is_string($code)) {
+            $this->merge([
+                'code' => Str::lower(trim($code)),
+            ]);
+        }
+    }
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -29,6 +41,13 @@ class UpdateProfessionalSchoolRequest extends FormRequest
 
         return [
             'faculty_id' => ['required', 'integer', Rule::exists('faculties', 'id')],
+            'code' => [
+                'required',
+                'string',
+                'max:32',
+                'alpha_dash',
+                Rule::unique('professional_schools', 'code')->ignore($school),
+            ],
             'name' => [
                 'required',
                 'string',

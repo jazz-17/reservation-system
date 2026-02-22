@@ -74,6 +74,7 @@ export type Faculty = {
 export type ProfessionalSchool = {
     id: number;
     faculty_id: number;
+    code: string | null;
     name: string;
     base_year_min: number;
     base_year_max: number;

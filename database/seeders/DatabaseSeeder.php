@@ -27,12 +27,12 @@ class DatabaseSeeder extends Seeder
 
         $systemsSchool = ProfessionalSchool::query()->updateOrCreate(
             ['faculty_id' => $systemsFaculty->id, 'name' => 'E.P. Sistemas'],
-            ['active' => true, 'base_year_min' => $schoolMin, 'base_year_max' => $schoolMax],
+            ['code' => 'ep_sistemas', 'active' => true, 'base_year_min' => $schoolMin, 'base_year_max' => $schoolMax],
         );
 
         ProfessionalSchool::query()->updateOrCreate(
             ['faculty_id' => $systemsFaculty->id, 'name' => 'E.P. Software'],
-            ['active' => true, 'base_year_min' => $schoolMin, 'base_year_max' => $schoolMax],
+            ['code' => 'ep_software', 'active' => true, 'base_year_min' => $schoolMin, 'base_year_max' => $schoolMax],
         );
 
         User::factory()->create([

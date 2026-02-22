@@ -48,6 +48,12 @@ class CreateNewUser implements CreatesNewUsers
                 function (string $attribute, mixed $value, \Closure $fail): void {
                     $email = Str::lower((string) $value);
 
+                    if (! Str::endsWith($email, '@unmsm.edu.pe')) {
+                        $fail('Usa tu correo institucional @unmsm.edu.pe.');
+
+                        return;
+                    }
+
                     if (! AllowListEntry::query()->where('email', $email)->exists()) {
                         $fail('Este correo no está autorizado para registrarse.');
                     }
@@ -57,7 +63,7 @@ class CreateNewUser implements CreatesNewUsers
         ]);
 
         $school = null;
-        $validator->after(function ($validator) use ($selectedSchoolId, $input, &$school): void {
+        $validator->after(function ($validator) use ($selectedSchoolId, $input, $normalizedEmail, &$school): void {
             if ($selectedSchoolId <= 0) {
                 return;
             }
@@ -75,6 +81,32 @@ class CreateNewUser implements CreatesNewUsers
             $baseYear = (int) ($input['base_year'] ?? 0);
             if ($baseYear < $school->base_year_min || $baseYear > $school->base_year_max) {
                 $validator->errors()->add('base_year', 'La base seleccionada no está disponible para la escuela.');
+            }
+
+            if ($normalizedEmail === '' || ! Str::endsWith($normalizedEmail, '@unmsm.edu.pe')) {
+                return;
+            }
+
+            $entry = AllowListEntry::query()
+                ->where('email', $normalizedEmail)
+                ->first(['email', 'professional_school_id', 'base_year']);
+
+            if ($entry === null) {
+                return;
+            }
+
+            if ($entry->professional_school_id === null || $entry->base_year === null) {
+                $validator->errors()->add('email', 'Este correo no tiene escuela/base asignada. Contacta al administrador.');
+
+                return;
+            }
+
+            if ((int) $entry->professional_school_id !== $selectedSchoolId) {
+                $validator->errors()->add('professional_school_id', 'La escuela seleccionada no coincide con tu registro institucional.');
+            }
+
+            if ((int) $entry->base_year !== $baseYear) {
+                $validator->errors()->add('base_year', 'La base seleccionada no coincide con tu registro institucional.');
             }
         });
 

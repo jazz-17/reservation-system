@@ -23,7 +23,7 @@ class ProfessionalSchoolController extends Controller
                 ->with(['faculty:id,name'])
                 ->orderBy('faculty_id')
                 ->orderBy('name')
-                ->get(['id', 'faculty_id', 'name', 'base_year_min', 'base_year_max', 'active']),
+                ->get(['id', 'faculty_id', 'code', 'name', 'base_year_min', 'base_year_max', 'active']),
         ]);
     }
 
@@ -31,6 +31,7 @@ class ProfessionalSchoolController extends Controller
     {
         ProfessionalSchool::query()->create([
             'faculty_id' => $request->validated('faculty_id'),
+            'code' => $request->validated('code'),
             'name' => $request->validated('name'),
             'base_year_min' => $request->validated('base_year_min'),
             'base_year_max' => $request->validated('base_year_max'),
@@ -44,6 +45,7 @@ class ProfessionalSchoolController extends Controller
     {
         $professionalSchool->forceFill([
             'faculty_id' => $request->validated('faculty_id'),
+            'code' => $request->validated('code'),
             'name' => $request->validated('name'),
             'base_year_min' => $request->validated('base_year_min'),
             'base_year_max' => $request->validated('base_year_max'),

@@ -226,7 +226,7 @@ watch(selectedSchoolId, () => {
                         :tabindex="7"
                         autocomplete="email"
                         name="email"
-                        placeholder="correo@univ.edu"
+                        placeholder="usuario@unmsm.edu.pe"
                     />
                     <InputError :message="errors.email" />
                 </div>

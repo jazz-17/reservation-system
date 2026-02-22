@@ -2,9 +2,20 @@
 import { Head } from '@inertiajs/vue3';
 import { useQuery } from '@tanstack/vue-query';
 import { computed, ref } from 'vue';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminSection from '@/components/admin/AdminSection.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableEmpty,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatBaseYear, formatDateTime } from '@/lib/formatters';
 import { fetchJson } from '@/lib/http';
 import { index as historyIndex } from '@/routes/admin/history';
@@ -42,14 +53,12 @@ const { data, isLoading, isError } = useQuery({
     <Head title="Historial" />
 
     <div class="flex flex-col gap-4 p-4">
-        <div>
-            <h1 class="text-lg font-semibold">Historial</h1>
-            <p class="text-sm text-muted-foreground">
-                Filtra por estado y rango de fechas.
-            </p>
-        </div>
+        <AdminPageHeader
+            title="Historial"
+            subtitle="Filtra por estado y rango de fechas."
+        />
 
-        <div class="rounded-lg border border-border/60 p-4">
+        <AdminSection>
             <div class="grid gap-3 md:grid-cols-3">
                 <div class="grid gap-1">
                     <label class="text-sm" for="status">Estado</label>
@@ -84,44 +93,35 @@ const { data, isLoading, isError } = useQuery({
                     />
                 </div>
             </div>
-        </div>
+        </AdminSection>
 
-        <div
-            v-if="isLoading"
-            class="overflow-hidden rounded-lg border border-border/60"
-        >
-            <table class="w-full text-sm">
-                <thead class="bg-muted/50 text-left">
-                    <tr>
-                        <th class="px-4 py-3">Estado</th>
-                        <th class="px-4 py-3">Inicio</th>
-                        <th class="px-4 py-3">Fin</th>
-                        <th class="px-4 py-3">Estudiante</th>
-                        <th class="px-4 py-3">Escuela/Base</th>
-                        <th class="px-4 py-3"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="i in 5"
-                        :key="i"
-                        class="border-t border-border/60"
-                    >
-                        <td class="px-4 py-3"><Skeleton class="h-4 w-16" /></td>
-                        <td class="px-4 py-3"><Skeleton class="h-4 w-28" /></td>
-                        <td class="px-4 py-3"><Skeleton class="h-4 w-28" /></td>
-                        <td class="px-4 py-3">
-                            <Skeleton class="mb-1 h-4 w-32" />
-                            <Skeleton class="h-3 w-40" />
-                        </td>
-                        <td class="px-4 py-3"><Skeleton class="h-4 w-24" /></td>
-                        <td class="px-4 py-3 text-right">
-                            <Skeleton class="ml-auto h-7 w-10" />
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <Table v-if="isLoading">
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Inicio</TableHead>
+                    <TableHead>Fin</TableHead>
+                    <TableHead>Estudiante</TableHead>
+                    <TableHead>Escuela/Base</TableHead>
+                    <TableHead />
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                <TableRow v-for="i in 5" :key="i">
+                    <TableCell><Skeleton class="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton class="h-4 w-28" /></TableCell>
+                    <TableCell><Skeleton class="h-4 w-28" /></TableCell>
+                    <TableCell>
+                        <Skeleton class="mb-1 h-4 w-32" />
+                        <Skeleton class="h-3 w-40" />
+                    </TableCell>
+                    <TableCell><Skeleton class="h-4 w-24" /></TableCell>
+                    <TableCell class="text-right">
+                        <Skeleton class="ml-auto h-7 w-10" />
+                    </TableCell>
+                </TableRow>
+            </TableBody>
+        </Table>
 
         <div
             v-else-if="isError"
@@ -130,65 +130,54 @@ const { data, isLoading, isError } = useQuery({
             No se pudo cargar el historial.
         </div>
 
-        <div v-else class="overflow-hidden rounded-lg border border-border/60">
-            <table class="w-full text-sm">
-                <thead class="bg-muted/50 text-left">
-                    <tr>
-                        <th class="px-4 py-3">Estado</th>
-                        <th class="px-4 py-3">Inicio</th>
-                        <th class="px-4 py-3">Fin</th>
-                        <th class="px-4 py-3">Estudiante</th>
-                        <th class="px-4 py-3">Escuela/Base</th>
-                        <th class="px-4 py-3"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="r in data ?? []"
-                        :key="r.id"
-                        class="border-t border-border/60"
-                    >
-                        <td class="px-4 py-3">
-                            <StatusBadge :status="r.status" />
-                        </td>
-                        <td class="px-4 py-3">
-                            {{ formatDateTime(r.starts_at) }}
-                        </td>
-                        <td class="px-4 py-3">
-                            {{ formatDateTime(r.ends_at) }}
-                        </td>
-                        <td class="px-4 py-3">
-                            {{ r.user.name }}<br />
-                            <span class="text-xs text-muted-foreground">{{
-                                r.user.email
-                            }}</span>
-                        </td>
-                        <td class="px-4 py-3">
-                            {{ r.user.professional_school?.name ?? '—' }} /
-                            {{ formatBaseYear(r.user.base_year) }}
-                        </td>
-                        <td class="px-4 py-3 text-right">
-                            <a
-                                v-if="r.status === 'approved'"
-                                :href="reservationPdf(r.id).url"
-                                class="rounded-md border border-border/60 px-3 py-1.5 text-xs"
-                                target="_blank"
-                                rel="noopener"
-                            >
-                                PDF
-                            </a>
-                        </td>
-                    </tr>
-                    <tr v-if="(data ?? []).length === 0">
-                        <td
-                            colspan="6"
-                            class="px-4 py-8 text-center text-muted-foreground"
+        <Table v-else>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Inicio</TableHead>
+                    <TableHead>Fin</TableHead>
+                    <TableHead>Estudiante</TableHead>
+                    <TableHead>Escuela/Base</TableHead>
+                    <TableHead />
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                <TableRow v-for="r in data ?? []" :key="r.id">
+                    <TableCell>
+                        <StatusBadge :status="r.status" />
+                    </TableCell>
+                    <TableCell>
+                        {{ formatDateTime(r.starts_at) }}
+                    </TableCell>
+                    <TableCell>
+                        {{ formatDateTime(r.ends_at) }}
+                    </TableCell>
+                    <TableCell>
+                        {{ r.user.name }}<br />
+                        <span class="text-xs text-muted-foreground">{{
+                            r.user.email
+                        }}</span>
+                    </TableCell>
+                    <TableCell>
+                        {{ r.user.professional_school?.name ?? '—' }} /
+                        {{ formatBaseYear(r.user.base_year) }}
+                    </TableCell>
+                    <TableCell class="text-right">
+                        <a
+                            v-if="r.status === 'approved'"
+                            :href="reservationPdf(r.id).url"
+                            class="rounded-md border border-border/60 px-3 py-1.5 text-xs"
+                            target="_blank"
+                            rel="noopener"
                         >
-                            Sin resultados.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                            PDF
+                        </a>
+                    </TableCell>
+                </TableRow>
+                <TableEmpty v-if="(data ?? []).length === 0" :colspan="6">
+                    Sin resultados.
+                </TableEmpty>
+            </TableBody>
+        </Table>
     </div>
 </template>

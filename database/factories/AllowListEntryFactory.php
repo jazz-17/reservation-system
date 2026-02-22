@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\ProfessionalSchool;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -16,8 +17,13 @@ class AllowListEntryFactory extends Factory
      */
     public function definition(): array
     {
+        $min = 2018;
+        $max = max($min, (int) now()->year);
+
         return [
             'email' => fake()->unique()->safeEmail(),
+            'professional_school_id' => ProfessionalSchool::factory(),
+            'base_year' => fake()->numberBetween($min, $max),
         ];
     }
 }

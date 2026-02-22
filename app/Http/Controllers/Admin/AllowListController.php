@@ -7,12 +7,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ImportAllowListRequest;
 use App\Models\AllowListEntry;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 use Inertia\Inertia;
-use Inertia\Response;
+use Inertia\Response as InertiaResponse;
 
 class AllowListController extends Controller
 {
-    public function index(): Response
+    public function index(): InertiaResponse
     {
         return Inertia::render('admin/AllowList', [
             'count' => AllowListEntry::query()->count(),
@@ -38,5 +39,20 @@ class AllowListController extends Controller
         );
 
         return back()->with('import_report', $report)->with('success', 'Allow-list importada correctamente.');
+    }
+
+    public function template(): Response
+    {
+        $content = implode("\n", [
+            'email,school_code,base',
+            'alumno@unmsm.edu.pe,ep_sistemas,B22',
+            '',
+        ]);
+
+        return response($content, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="allow-list-template.csv"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+        ]);
     }
 }

@@ -22,6 +22,7 @@ class ProfessionalSchoolFactory extends Factory
 
         return [
             'faculty_id' => Faculty::factory(),
+            'code' => fake()->unique()->bothify('ep_??????'),
             'name' => fake()->unique()->words(asText: true),
             'base_year_min' => $min,
             'base_year_max' => $max,
