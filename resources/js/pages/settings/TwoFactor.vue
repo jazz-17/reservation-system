@@ -27,7 +27,7 @@ defineOptions({ layout: [AppLayout, SettingsLayout] });
 
 useBreadcrumbs([
     {
-        title: 'Two-Factor Authentication',
+        title: 'Autenticación de dos factores',
         href: show.url(),
     },
 ]);
@@ -41,7 +41,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <Head title="Two-Factor Authentication" />
+    <Head title="Autenticación de dos factores" />
 
     <h1 class="sr-only">Two-Factor Authentication Settings</h1>
 

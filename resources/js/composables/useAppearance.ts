@@ -80,6 +80,7 @@ export function initializeTheme(): void {
     updateTheme(savedAppearance || 'system');
 
     // Set up system theme change listener...
+    mediaQuery()?.removeEventListener('change', handleSystemThemeChange);
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
 }
 

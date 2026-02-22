@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { computed } from 'vue';
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatDateTime } from '@/lib/formatters';
@@ -193,12 +194,13 @@ const cancel = (reservationId: number): void => {
                                         @confirm="cancel(r.id)"
                                     >
                                         <template #trigger>
-                                            <button
+                                            <Button
                                                 type="button"
-                                                class="rounded-md border border-border/60 px-3 py-1.5 text-xs"
+                                                variant="outline"
+                                                size="sm"
                                             >
                                                 Cancelar
-                                            </button>
+                                            </Button>
                                         </template>
                                     </ConfirmDialog>
                                 </div>

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminSection from '@/components/admin/AdminSection.vue';
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
 import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatDateTime } from '@/lib/formatters';
 import {
@@ -29,15 +32,12 @@ const remove = (id: number): void => {
     <Head title="Blackouts" />
 
     <div class="flex flex-col gap-4 p-4">
-            <div>
-                <h1 class="text-lg font-semibold">Blackouts</h1>
-                <p class="text-sm text-muted-foreground">
-                    Fechas/horas no reservables (mantenimiento, feriados, etc.).
-                </p>
-            </div>
+            <AdminPageHeader
+                title="Blackouts"
+                subtitle="Fechas/horas no reservables (mantenimiento, feriados, etc.)."
+            />
 
-            <div class="rounded-lg border border-border/60 p-4">
-                <div class="text-sm font-medium">Crear blackout</div>
+            <AdminSection title="Crear blackout">
 
                 <Form
                     v-bind="storeBlackout.form()"
@@ -79,16 +79,15 @@ const remove = (id: number): void => {
                     </div>
 
                     <div class="flex items-center justify-end md:col-span-2">
-                        <button
+                        <Button
                             type="submit"
-                            class="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"
                             :disabled="processing"
                         >
                             Guardar
-                        </button>
+                        </Button>
                     </div>
                 </Form>
-            </div>
+            </AdminSection>
 
             <div class="rounded-lg border border-border/60">
                 <div
@@ -119,12 +118,13 @@ const remove = (id: number): void => {
                             @confirm="remove(b.id)"
                         >
                             <template #trigger>
-                                <button
+                                <Button
                                     type="button"
-                                    class="self-start rounded-md border border-border/60 px-3 py-1.5 text-xs md:self-auto"
+                                    variant="outline"
+                                    size="sm"
                                 >
                                     Eliminar
-                                </button>
+                                </Button>
                             </template>
                         </ConfirmDialog>
                     </div>

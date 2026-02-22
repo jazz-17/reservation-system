@@ -9,6 +9,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import FullCalendar from '@fullcalendar/vue3';
 import { Form, Head, Link, usePage } from '@inertiajs/vue3';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { computed, nextTick, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
@@ -428,13 +429,13 @@ watch(selectedDate, (date) => {
                     <InputError :message="errors.ends_at" />
                     <InputError :message="errors.reservation" />
 
-                    <button
+                    <Button
                         type="submit"
-                        class="mt-2 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"
+                        class="mt-2"
                         :disabled="processing || !canSubmit"
                     >
                         Enviar solicitud
-                    </button>
+                    </Button>
 
                     <Link
                         :href="reservationsIndex().url"

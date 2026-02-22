@@ -15,14 +15,14 @@ defineOptions({ layout: [AppLayout, SettingsLayout] });
 
 useBreadcrumbs([
     {
-        title: 'Password settings',
+        title: 'Contraseña',
         href: edit().url,
     },
 ]);
 </script>
 
 <template>
-    <Head title="Password settings" />
+    <Head title="Contraseña" />
 
     <h1 class="sr-only">Password Settings</h1>
 

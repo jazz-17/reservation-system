@@ -11,14 +11,14 @@ defineOptions({ layout: [AppLayout, SettingsLayout] });
 
 useBreadcrumbs([
     {
-        title: 'Appearance settings',
+        title: 'Apariencia',
         href: edit().url,
     },
 ]);
 </script>
 
 <template>
-    <Head title="Appearance settings" />
+    <Head title="Apariencia" />
 
     <h1 class="sr-only">Appearance Settings</h1>
 

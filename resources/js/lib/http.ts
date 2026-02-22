@@ -27,7 +27,15 @@ export const fetchJson = async <T>(
     });
 
     if (!response.ok) {
-        const message = `Request failed: ${response.status}`;
+        let message = `${response.status} ${response.statusText}`;
+        try {
+            const body = await response.json();
+            if (body.message) {
+                message = body.message;
+            }
+        } catch {
+            // Response body wasn't JSON, use status text
+        }
         throw new Error(message);
     }
 

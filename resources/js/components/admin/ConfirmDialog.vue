@@ -12,6 +12,7 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { buttonVariants } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const props = withDefaults(
     defineProps<{
@@ -70,11 +71,10 @@ const handleConfirm = (): void => {
                 <label class="text-sm" for="confirm-dialog-input">
                     {{ props.inputLabel }}
                 </label>
-                <input
+                <Input
                     id="confirm-dialog-input"
                     v-model="inputValue"
                     type="text"
-                    class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                 />
             </div>
 

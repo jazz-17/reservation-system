@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { Form, Head, usePage } from '@inertiajs/vue3';
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminSection from '@/components/admin/AdminSection.vue';
 import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import {
     index as allowListIndex,
     importMethod as importAllowList,
+    template as allowListTemplate,
 } from '@/routes/admin/allow-list';
 import type { ImportReport } from '@/types/admin';
 
@@ -26,16 +30,12 @@ useBreadcrumbs([
     <Head title="Allow-list" />
 
     <div class="flex flex-col gap-4 p-4">
-            <div>
-                <h1 class="text-lg font-semibold">Allow-list</h1>
-                <p class="text-sm text-muted-foreground">
-                    Correos permitidos para registrarse. Total:
-                    {{ props.count }}
-                </p>
-            </div>
+            <AdminPageHeader
+                title="Allow-list"
+                :subtitle="`Correos permitidos para registrarse. Total: ${props.count}`"
+            />
 
-            <div v-if="report" class="rounded-lg border border-border/60 p-4">
-                <div class="text-sm font-medium">Última importación</div>
+            <AdminSection v-if="report" title="Última importación">
                 <div class="mt-2 text-sm text-muted-foreground">
                     Importados: {{ report.imported }} · Duplicados:
                     {{ report.duplicates }} · Inválidos: {{ report.invalid }}
@@ -59,13 +59,23 @@ useBreadcrumbs([
                         Se muestran 10 de {{ report.invalid_rows.length }}.
                     </div>
                 </div>
-            </div>
+            </AdminSection>
 
-            <div class="rounded-lg border border-border/60 p-4">
-                <div class="text-sm font-medium">Importar</div>
+            <AdminSection>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="text-sm font-medium">Importar</div>
+                    <a
+                        :href="allowListTemplate().url"
+                        class="rounded-md border border-border/60 px-3 py-2 text-xs font-medium"
+                        download
+                    >
+                        Descargar plantilla CSV
+                    </a>
+                </div>
                 <p class="mt-1 text-sm text-muted-foreground">
-                    Sube un archivo CSV/XLSX con una columna (o primera columna)
-                    de correos.
+                    Sube un archivo CSV/XLSX con las columnas: <strong>email</strong>,
+                    <strong>school_code</strong> y <strong>base</strong> (ej. B22 o 2022).
+                    También funciona sin encabezados si el orden es: email, school_code, base.
                 </p>
 
                 <Form
@@ -100,15 +110,14 @@ useBreadcrumbs([
                     </div>
 
                     <div class="flex items-center justify-end">
-                        <button
+                        <Button
                             type="submit"
-                            class="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"
                             :disabled="processing"
                         >
                             Importar
-                        </button>
+                        </Button>
                     </div>
                 </Form>
-            </div>
+            </AdminSection>
     </div>
 </template>

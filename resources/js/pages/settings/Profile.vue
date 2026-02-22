@@ -23,7 +23,7 @@ defineOptions({ layout: [AppLayout, SettingsLayout] });
 
 useBreadcrumbs([
     {
-        title: 'Profile settings',
+        title: 'Perfil',
         href: edit().url,
     },
 ]);
@@ -33,7 +33,7 @@ const user = page.props.auth.user;
 </script>
 
 <template>
-    <Head title="Profile settings" />
+    <Head title="Perfil" />
 
     <h1 class="sr-only">Profile Settings</h1>
 

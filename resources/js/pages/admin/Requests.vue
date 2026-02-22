@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatBaseYear, formatDateTime } from '@/lib/formatters';
@@ -49,9 +51,7 @@ const decide = (action: 'approve' | 'reject', reservationId: number, reason?: st
     <Head title="Solicitudes" />
 
     <div class="flex flex-col gap-4 p-4">
-        <div class="flex items-center justify-between">
-            <h1 class="text-lg font-semibold">Solicitudes pendientes</h1>
-        </div>
+        <AdminPageHeader title="Solicitudes pendientes" />
 
         <div v-if="isLoading" class="grid gap-3">
             <div
@@ -116,12 +116,13 @@ const decide = (action: 'approve' | 'reject', reservationId: number, reason?: st
                             @confirm="(reason) => decide('approve', r.id, reason)"
                         >
                             <template #trigger>
-                                <button
+                                <Button
                                     type="button"
-                                    class="rounded-md bg-emerald-600 px-3 py-2 text-xs font-medium text-white"
+                                    size="sm"
+                                    class="bg-emerald-600 text-white hover:bg-emerald-600/90"
                                 >
                                     Aprobar
-                                </button>
+                                </Button>
                             </template>
                         </ConfirmDialog>
                         <ConfirmDialog
@@ -132,12 +133,13 @@ const decide = (action: 'approve' | 'reject', reservationId: number, reason?: st
                             @confirm="(reason) => decide('reject', r.id, reason)"
                         >
                             <template #trigger>
-                                <button
+                                <Button
                                     type="button"
-                                    class="rounded-md border border-border/60 px-3 py-2 text-xs font-medium"
+                                    variant="outline"
+                                    size="sm"
                                 >
                                     Rechazar
-                                </button>
+                                </Button>
                             </template>
                         </ConfirmDialog>
                     </div>

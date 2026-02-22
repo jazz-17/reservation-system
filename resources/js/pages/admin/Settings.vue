@@ -1,7 +1,18 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { computed, reactive } from 'vue';
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminSection from '@/components/admin/AdminSection.vue';
 import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import {
     update as updateSettings,
@@ -156,12 +167,10 @@ const leadTimePreview = computed(() => {
     <Head title="Configuración" />
 
     <div class="flex flex-col gap-4 p-4">
-            <div>
-                <h1 class="text-lg font-semibold">Configuración</h1>
-                <p class="text-sm text-muted-foreground">
-                    Ajusta reglas de reservas, horarios y notificaciones.
-                </p>
-            </div>
+            <AdminPageHeader
+                title="Configuración"
+                subtitle="Ajusta reglas de reservas, horarios y notificaciones."
+            />
 
             <Form
                 v-bind="updateSettings.form()"
@@ -477,45 +486,41 @@ const leadTimePreview = computed(() => {
                             </div>
                         </div>
 
-                        <div class="overflow-hidden rounded-md border border-border/60">
-                            <table class="w-full text-sm">
-                                <thead class="bg-muted/50 text-left">
-                                    <tr>
-                                        <th class="px-3 py-2">Día</th>
-                                        <th class="px-3 py-2">Horario</th>
-                                        <th class="px-3 py-2">Resumen</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr
-                                        v-for="row in schedulePreview"
-                                        :key="row.day"
-                                        class="border-t border-border/60"
-                                    >
-                                        <td class="px-3 py-2">
-                                            {{ dayLabels[row.day] }}
-                                        </td>
-                                        <td class="px-3 py-2">
-                                            {{ row.open }}–{{ row.close }}
-                                        </td>
-                                        <td class="px-3 py-2">
-                                            {{ row.summary }}
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Día</TableHead>
+                                    <TableHead>Horario</TableHead>
+                                    <TableHead>Resumen</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <TableRow
+                                    v-for="row in schedulePreview"
+                                    :key="row.day"
+                                >
+                                    <TableCell>
+                                        {{ dayLabels[row.day] }}
+                                    </TableCell>
+                                    <TableCell>
+                                        {{ row.open }}–{{ row.close }}
+                                    </TableCell>
+                                    <TableCell>
+                                        {{ row.summary }}
+                                    </TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
                     </div>
                 </div>
 
                 <div class="flex items-center justify-end gap-2">
-                    <button
+                    <Button
                         type="submit"
-                        class="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"
                         :disabled="processing"
                     >
                         Guardar
-                    </button>
+                    </Button>
                 </div>
             </Form>
     </div>

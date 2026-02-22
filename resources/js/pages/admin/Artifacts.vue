@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import { Button } from '@/components/ui/button';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatArtifactKind, formatDateTime } from '@/lib/formatters';
 import {
@@ -26,12 +28,10 @@ const retry = (id: number): void => {
     <Head title="Reintentos" />
 
     <div class="flex flex-col gap-4 p-4">
-        <div>
-            <h1 class="text-lg font-semibold">Reintentos</h1>
-            <p class="text-sm text-muted-foreground">
-                Artefactos fallidos (PDF / correos) para reintentar.
-            </p>
-        </div>
+        <AdminPageHeader
+            title="Reintentos"
+            subtitle="Artefactos fallidos (PDF / correos) para reintentar."
+        />
 
         <div
             v-if="props.artifacts.length === 0"
@@ -79,13 +79,14 @@ const retry = (id: number): void => {
                         </div>
                     </div>
 
-                    <button
+                    <Button
                         type="button"
-                        class="self-start rounded-md bg-primary px-3 py-2 text-xs text-primary-foreground md:self-auto"
+                        size="sm"
+                        class="self-start md:self-auto"
                         @click="retry(a.id)"
                     >
                         Reintentar
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

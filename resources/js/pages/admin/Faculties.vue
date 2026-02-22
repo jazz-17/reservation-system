@@ -1,6 +1,18 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminSection from '@/components/admin/AdminSection.vue';
 import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableEmpty,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import {
     index as facultiesIndex,
@@ -23,15 +35,12 @@ useBreadcrumbs([
     <Head title="Facultades" />
 
     <div class="flex flex-col gap-4 p-4">
-            <div>
-                <h1 class="text-lg font-semibold">Facultades</h1>
-                <p class="text-sm text-muted-foreground">
-                    Administra las facultades disponibles para el registro.
-                </p>
-            </div>
+            <AdminPageHeader
+                title="Facultades"
+                subtitle="Administra las facultades disponibles para el registro."
+            />
 
-            <div class="rounded-lg border border-border/60 p-4">
-                <div class="text-sm font-medium">Nueva facultad</div>
+            <AdminSection title="Nueva facultad">
 
                 <Form
                     v-bind="store.form()"
@@ -65,98 +74,87 @@ useBreadcrumbs([
                     </div>
 
                     <div class="flex items-end justify-end">
-                        <button
+                        <Button
                             type="submit"
-                            class="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"
                             :disabled="processing"
                         >
                             Crear
-                        </button>
+                        </Button>
                     </div>
                 </Form>
-            </div>
+            </AdminSection>
 
-            <div class="overflow-hidden rounded-lg border border-border/60">
-                <table class="w-full text-sm">
-                    <thead class="bg-muted/50 text-left">
-                        <tr>
-                            <th class="px-4 py-3">Nombre</th>
-                            <th class="px-4 py-3">Activa</th>
-                            <th class="px-4 py-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="f in props.faculties"
-                            :key="f.id"
-                            class="border-t border-border/60"
-                        >
-                            <td class="px-4 py-3">
-                                <Form
-                                    v-bind="update.form(f.id)"
-                                    v-slot="{ errors, processing }"
-                                    class="flex flex-col gap-1 md:flex-row md:items-center md:gap-2"
-                                >
-                                    <input
-                                        name="name"
-                                        type="text"
-                                        class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm md:w-[380px]"
-                                        :value="f.name"
-                                        required
-                                    />
-                                    <div class="flex items-center gap-2">
-                                        <label
-                                            class="flex items-center gap-2 text-sm"
-                                        >
-                                            <input
-                                                type="hidden"
-                                                name="active"
-                                                value="0"
-                                            />
-                                            <input
-                                                type="checkbox"
-                                                name="active"
-                                                value="1"
-                                                :checked="f.active"
-                                            />
-                                            Activa
-                                        </label>
-
-                                        <button
-                                            type="submit"
-                                            class="rounded-md border border-border/60 px-3 py-2 text-xs font-medium disabled:opacity-50"
-                                            :disabled="processing"
-                                        >
-                                            Guardar
-                                        </button>
-                                    </div>
-
-                                    <div class="text-xs text-destructive">
-                                        <div v-if="errors.name">
-                                            {{ errors.name }}
-                                        </div>
-                                    </div>
-                                </Form>
-                            </td>
-                            <td class="px-4 py-3">
-                                {{ f.active ? 'Sí' : 'No' }}
-                            </td>
-                            <td class="px-4 py-3 text-right text-xs text-muted-foreground">
-                                ID: {{ f.id }}
-                            </td>
-                        </tr>
-
-                        <tr v-if="props.faculties.length === 0">
-                            <td
-                                colspan="3"
-                                class="px-4 py-8 text-center text-muted-foreground"
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>Activa</TableHead>
+                        <TableHead />
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    <TableRow v-for="f in props.faculties" :key="f.id">
+                        <TableCell>
+                            <Form
+                                v-bind="update.form(f.id)"
+                                v-slot="{ errors, processing }"
+                                class="flex flex-col gap-1 md:flex-row md:items-center md:gap-2"
                             >
-                                Sin registros.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                                <input
+                                    name="name"
+                                    type="text"
+                                    class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm md:w-[380px]"
+                                    :value="f.name"
+                                    required
+                                />
+                                <div class="flex items-center gap-2">
+                                    <label
+                                        class="flex items-center gap-2 text-sm"
+                                    >
+                                        <input
+                                            type="hidden"
+                                            name="active"
+                                            value="0"
+                                        />
+                                        <input
+                                            type="checkbox"
+                                            name="active"
+                                            value="1"
+                                            :checked="f.active"
+                                        />
+                                        Activa
+                                    </label>
+
+                                    <Button
+                                        type="submit"
+                                        variant="outline"
+                                        size="sm"
+                                        :disabled="processing"
+                                    >
+                                        Guardar
+                                    </Button>
+                                </div>
+
+                                <div class="text-xs text-destructive">
+                                    <div v-if="errors.name">
+                                        {{ errors.name }}
+                                    </div>
+                                </div>
+                            </Form>
+                        </TableCell>
+                        <TableCell>
+                            {{ f.active ? 'Sí' : 'No' }}
+                        </TableCell>
+                        <TableCell class="text-right text-xs text-muted-foreground">
+                            ID: {{ f.id }}
+                        </TableCell>
+                    </TableRow>
+
+                    <TableEmpty v-if="props.faculties.length === 0" :colspan="3">
+                        Sin registros.
+                    </TableEmpty>
+                </TableBody>
+            </Table>
     </div>
 </template>
 
