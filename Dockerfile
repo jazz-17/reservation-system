@@ -76,16 +76,18 @@ COPY . .
 COPY --from=node-build /build/public/build public/build
 
 RUN composer dump-autoload --optimize \
-    && php artisan config:cache \
-    && php artisan route:cache \
     && php artisan view:cache
 
 RUN chown -R www:www storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 USER www
 
 EXPOSE 9000
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]
 
 # ============================================
