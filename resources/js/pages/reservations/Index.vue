@@ -10,6 +10,7 @@ import {
     index as reservationsIndex,
 } from '@/routes/reservations';
 import { type BreadcrumbItem } from '@/types';
+import { computed } from 'vue';
 
 type Reservation = {
     id: number;
@@ -57,6 +58,22 @@ const statusLabel = (status: Reservation['status']): string => {
             return 'Cancelada';
     }
 };
+
+const isHistorical = (r: Reservation): boolean => {
+    if (r.status === 'rejected' || r.status === 'cancelled') {
+        return true;
+    }
+
+    return new Date(r.ends_at).getTime() < Date.now();
+};
+
+const activeReservations = computed(() =>
+    (query.data ?? []).filter((r) => !isHistorical(r)),
+);
+
+const historicalReservations = computed(() =>
+    (query.data ?? []).filter((r) => isHistorical(r)),
+);
 
 const cancel = (reservationId: number): void => {
     if (!confirm('¿Cancelar esta reserva?')) {
@@ -110,6 +127,9 @@ const cancel = (reservationId: number): void => {
                 v-else
                 class="overflow-hidden rounded-lg border border-border/60"
             >
+                <div class="border-b border-border/60 px-4 py-3 text-sm font-medium">
+                    Reservas activas
+                </div>
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left">
                         <tr>
@@ -121,7 +141,7 @@ const cancel = (reservationId: number): void => {
                     </thead>
                     <tbody>
                         <tr
-                            v-for="r in query.data ?? []"
+                            v-for="r in activeReservations"
                             :key="r.id"
                             class="border-t border-border/60"
                         >
@@ -148,12 +168,50 @@ const cancel = (reservationId: number): void => {
                                 </button>
                             </td>
                         </tr>
-                        <tr v-if="(query.data ?? []).length === 0">
+                        <tr v-if="activeReservations.length === 0">
                             <td
                                 class="px-4 py-8 text-center text-muted-foreground"
                                 colspan="4"
                             >
-                                Aún no tienes reservas.
+                                No tienes reservas activas.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="border-y border-border/60 px-4 py-3 text-sm font-medium">
+                    Historial
+                </div>
+                <table class="w-full text-sm">
+                    <thead class="bg-muted/50 text-left">
+                        <tr>
+                            <th class="px-4 py-3">Estado</th>
+                            <th class="px-4 py-3">Inicio</th>
+                            <th class="px-4 py-3">Fin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="r in historicalReservations"
+                            :key="r.id"
+                            class="border-t border-border/60"
+                        >
+                            <td class="px-4 py-3">
+                                {{ statusLabel(r.status) }}
+                            </td>
+                            <td class="px-4 py-3">
+                                {{ formatDateTime(r.starts_at) }}
+                            </td>
+                            <td class="px-4 py-3">
+                                {{ formatDateTime(r.ends_at) }}
+                            </td>
+                        </tr>
+                        <tr v-if="historicalReservations.length === 0">
+                            <td
+                                class="px-4 py-8 text-center text-muted-foreground"
+                                colspan="3"
+                            >
+                                Sin historial.
                             </td>
                         </tr>
                     </tbody>

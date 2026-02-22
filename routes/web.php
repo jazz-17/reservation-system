@@ -7,8 +7,8 @@ use App\Http\Controllers\Admin\ReservationArtifactController;
 use App\Http\Controllers\Admin\ReservationHistoryController;
 use App\Http\Controllers\Admin\ReservationRequestController;
 use App\Http\Controllers\Admin\SettingsController;
-use App\Http\Controllers\Api\AdminRequestsController;
 use App\Http\Controllers\Api\AdminHistoryController;
+use App\Http\Controllers\Api\AdminRequestsController;
 use App\Http\Controllers\Api\PublicAvailabilityController;
 use App\Http\Controllers\Api\StudentReservationsController;
 use App\Http\Controllers\PublicCalendarController;
@@ -27,7 +27,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reservas', [ReservationController::class, 'index'])->name('reservations.index');
     Route::get('reservas/nueva', [ReservationController::class, 'create'])->name('reservations.create');
     Route::post('reservas', [ReservationController::class, 'store'])->middleware('throttle:6,1')->name('reservations.store');
-    Route::post('reservas/{reservation}/cancelar', [ReservationController::class, 'cancel'])->name('reservations.cancel');
+    Route::post('reservas/{reservation}/cancelar', [ReservationController::class, 'cancel'])
+        ->middleware('throttle:6,1')
+        ->can('cancel', 'reservation')
+        ->name('reservations.cancel');
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {

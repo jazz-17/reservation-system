@@ -2,6 +2,7 @@
 
 namespace App\Actions\Settings;
 
+use App\Actions\Audit\Audit;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Arr;
@@ -46,9 +47,6 @@ class SettingsService
         return (bool) $value;
     }
 
-    /**
-     * @return mixed
-     */
     public function get(string $key): mixed
     {
         $setting = Setting::query()->find($key);
@@ -66,16 +64,33 @@ class SettingsService
     public function setMany(array $values, User $actor): void
     {
         $normalized = $this->normalize($values);
+        $defaults = SettingsDefaults::values();
 
-        foreach ($normalized as $key => $value) {
-            if (! array_key_exists($key, SettingsDefaults::values())) {
-                continue;
+        $changedKeys = [];
+
+        $allowed = array_intersect_key($normalized, $defaults);
+        $existing = Setting::query()
+            ->whereIn('key', array_keys($allowed))
+            ->get()
+            ->keyBy('key');
+
+        foreach ($allowed as $key => $value) {
+            $previousValue = $existing->get($key)?->value ?? ($defaults[$key] ?? null);
+
+            if ($this->valuesDiffer($previousValue, $value)) {
+                $changedKeys[] = $key;
             }
 
             Setting::query()->updateOrCreate(
                 ['key' => $key],
                 ['value' => $value, 'updated_by' => $actor->id],
             );
+        }
+
+        if ($changedKeys !== []) {
+            Audit::record('settings.updated', actor: $actor, subject: null, metadata: [
+                'changed_keys' => array_values($changedKeys),
+            ]);
         }
     }
 
@@ -100,5 +115,13 @@ class SettingsService
 
         return $settings;
     }
-}
 
+    private function valuesDiffer(mixed $left, mixed $right): bool
+    {
+        if (is_array($left) || is_array($right)) {
+            return json_encode($left) !== json_encode($right);
+        }
+
+        return $left !== $right;
+    }
+}

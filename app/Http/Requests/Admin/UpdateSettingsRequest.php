@@ -46,14 +46,14 @@ class UpdateSettingsRequest extends FormRequest
             'pdf_template' => ['required', 'string', 'max:64'],
 
             'opening_hours' => ['required', 'array'],
-            'predefined_blocks' => ['required', 'array'],
+            'predefined_blocks' => ['present', 'array'],
 
             'notify_admin_emails' => ['required', 'array'],
-            'notify_admin_emails.to' => ['required', 'array'],
+            'notify_admin_emails.to' => ['present', 'array'],
             'notify_admin_emails.to.*' => ['email'],
-            'notify_admin_emails.cc' => ['nullable', 'array'],
+            'notify_admin_emails.cc' => ['present', 'array'],
             'notify_admin_emails.cc.*' => ['email'],
-            'notify_admin_emails.bcc' => ['nullable', 'array'],
+            'notify_admin_emails.bcc' => ['present', 'array'],
             'notify_admin_emails.bcc.*' => ['email'],
         ];
 
@@ -62,7 +62,7 @@ class UpdateSettingsRequest extends FormRequest
             $rules["opening_hours.{$day}.open"] = ['required', 'date_format:H:i'];
             $rules["opening_hours.{$day}.close"] = ['required', 'date_format:H:i'];
 
-            $rules["predefined_blocks.{$day}"] = ['required', 'array'];
+            $rules["predefined_blocks.{$day}"] = ['present', 'array'];
             $rules["predefined_blocks.{$day}.*.start"] = ['required', 'date_format:H:i'];
             $rules["predefined_blocks.{$day}.*.end"] = ['required', 'date_format:H:i'];
         }

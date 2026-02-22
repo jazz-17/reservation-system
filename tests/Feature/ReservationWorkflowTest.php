@@ -2,16 +2,21 @@
 
 use App\Jobs\GenerateReservationPdf;
 use App\Jobs\SendReservationEmail;
+use App\Mail\ReservationStatusMail;
 use App\Models\AllowListEntry;
 use App\Models\AuditEvent;
+use App\Models\Blackout;
 use App\Models\Enums\ReservationArtifactKind;
+use App\Models\Enums\ReservationArtifactStatus;
 use App\Models\Enums\ReservationStatus;
 use App\Models\Reservation;
 use App\Models\ReservationArtifact;
 use App\Models\Setting;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 
 test('registration is blocked when email is not in allow-list', function () {
     $email = 'student@example.edu';
@@ -220,4 +225,275 @@ test('pending reservations can expire via artisan command', function () {
     $reservation->refresh();
     expect($reservation->status)->toBe(ReservationStatus::Rejected);
     expect($reservation->decision_reason)->toBe('Expirada por falta de aprobación.');
+});
+
+test('students can cancel a pending reservation', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->addHours(6)->setTimezone('UTC');
+
+    $reservation = Reservation::factory()->create([
+        'user_id' => $user->id,
+        'status' => ReservationStatus::Pending,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school' => (string) $user->professional_school,
+        'base' => (string) $user->base,
+    ]);
+
+    $this->post(route('reservations.cancel', $reservation), ['reason' => 'Cambio de planes'])
+        ->assertRedirect(route('reservations.index'));
+
+    $reservation->refresh();
+    expect($reservation->status)->toBe(ReservationStatus::Cancelled);
+    expect($reservation->cancelled_by)->toBe($user->id);
+    expect($reservation->cancellation_reason)->toBe('Cambio de planes');
+
+    expect(AuditEvent::query()->where('event_type', 'reservation.cancelled')->where('subject_id', $reservation->id)->exists())->toBeTrue();
+
+    Queue::assertPushed(SendReservationEmail::class);
+});
+
+test('cancellation cutoff is enforced', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->addHour()->setTimezone('UTC');
+
+    $reservation = Reservation::factory()->create([
+        'user_id' => $user->id,
+        'status' => ReservationStatus::Pending,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school' => (string) $user->professional_school,
+        'base' => (string) $user->base,
+    ]);
+
+    $this->post(route('reservations.cancel', $reservation), ['reason' => null])
+        ->assertSessionHasErrors('reservation');
+
+    $reservation->refresh();
+    expect($reservation->status)->toBe(ReservationStatus::Pending);
+});
+
+test('approved reservations can be cancelled by the student', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->addHours(6)->setTimezone('UTC');
+
+    $reservation = Reservation::factory()->create([
+        'user_id' => $user->id,
+        'status' => ReservationStatus::Approved,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school' => (string) $user->professional_school,
+        'base' => (string) $user->base,
+    ]);
+
+    $this->post(route('reservations.cancel', $reservation), ['reason' => null])
+        ->assertRedirect(route('reservations.index'));
+
+    $reservation->refresh();
+    expect($reservation->status)->toBe(ReservationStatus::Cancelled);
+
+    expect(AuditEvent::query()->where('event_type', 'reservation.cancelled')->where('subject_id', $reservation->id)->exists())->toBeTrue();
+
+    Queue::assertPushed(SendReservationEmail::class);
+});
+
+test('students cannot cancel another student reservation', function () {
+    $owner = User::factory()->create();
+    $attacker = User::factory()->create();
+
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->addHours(6)->setTimezone('UTC');
+
+    $reservation = Reservation::factory()->create([
+        'user_id' => $owner->id,
+        'status' => ReservationStatus::Pending,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school' => (string) $owner->professional_school,
+        'base' => (string) $owner->base,
+    ]);
+
+    $this->actingAs($attacker)
+        ->post(route('reservations.cancel', $reservation), ['reason' => null])
+        ->assertForbidden();
+});
+
+test('admins can reject a pending reservation end-to-end', function () {
+    Queue::fake();
+
+    Setting::query()->create([
+        'key' => 'notify_admin_emails',
+        'value' => ['to' => ['admin.notify@example.edu'], 'cc' => [], 'bcc' => []],
+        'updated_by' => null,
+    ]);
+
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->create();
+
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->addDay()->setTime(16, 0)->setTimezone('UTC');
+
+    $reservation = Reservation::factory()->create([
+        'user_id' => $student->id,
+        'status' => ReservationStatus::Pending,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school' => (string) $student->professional_school,
+        'base' => (string) $student->base,
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.requests.reject', $reservation), ['reason' => 'No disponible'])
+        ->assertRedirect(route('admin.requests.index'));
+
+    $reservation->refresh();
+    expect($reservation->status)->toBe(ReservationStatus::Rejected);
+    expect($reservation->decided_by)->toBe($admin->id);
+    expect($reservation->decision_reason)->toBe('No disponible');
+
+    expect(AuditEvent::query()->where('event_type', 'reservation.rejected')->where('subject_id', $reservation->id)->exists())->toBeTrue();
+    expect(ReservationArtifact::query()->where('reservation_id', $reservation->id)->where('kind', ReservationArtifactKind::EmailAdmin)->exists())->toBeTrue();
+    expect(ReservationArtifact::query()->where('reservation_id', $reservation->id)->where('kind', ReservationArtifactKind::EmailStudent)->exists())->toBeTrue();
+
+    Queue::assertPushedTimes(SendReservationEmail::class, 2);
+});
+
+test('public availability marks approved reservations as occupied', function () {
+    $timezone = 'America/Lima';
+    $date = CarbonImmutable::now($timezone)->addDay()->format('Y-m-d');
+
+    $startUtc = CarbonImmutable::parse("{$date} 10:00", $timezone)->setTimezone('UTC');
+
+    Reservation::factory()->create([
+        'status' => ReservationStatus::Approved,
+        'starts_at' => $startUtc,
+        'ends_at' => $startUtc->addHour(),
+    ]);
+
+    $response = $this->getJson(route('api.public.availability', [
+        'from' => $date,
+        'to' => $date,
+    ]));
+
+    $response->assertOk();
+
+    $payload = $response->json();
+    $day = collect($payload['days'] ?? [])->firstWhere('date', $date);
+
+    expect($day)->not->toBeNull();
+
+    $slot = collect($day['slots'] ?? [])->firstWhere('start', $startUtc->toIso8601String());
+    expect($slot)->not->toBeNull();
+    expect($slot['status'])->toBe('occupied');
+});
+
+test('public availability returns calendar events for a date range', function () {
+    $timezone = 'America/Lima';
+    $date = CarbonImmutable::now($timezone)->addDay()->format('Y-m-d');
+    $endDate = CarbonImmutable::parse($date, $timezone)->addDay()->format('Y-m-d');
+
+    $startUtc = CarbonImmutable::parse("{$date} 10:00", $timezone)->setTimezone('UTC');
+
+    Reservation::factory()->create([
+        'status' => ReservationStatus::Approved,
+        'starts_at' => $startUtc,
+        'ends_at' => $startUtc->addHour(),
+    ]);
+
+    Blackout::factory()->create([
+        'starts_at' => $startUtc->addHours(3),
+        'ends_at' => $startUtc->addHours(4),
+        'reason' => 'Mantenimiento',
+    ]);
+
+    $response = $this->getJson(route('api.public.availability', [
+        'start' => $date,
+        'end' => $endDate,
+    ]));
+
+    $response->assertOk();
+
+    $events = $response->json();
+    expect($events)->toBeArray();
+
+    $reservationEventStart = $startUtc->setTimezone($timezone)->toIso8601String();
+
+    $reservationEvent = collect($events)->firstWhere('start', $reservationEventStart);
+    expect($reservationEvent)->not->toBeNull();
+    expect($reservationEvent['extendedProps']['type'] ?? null)->toBe('reservation');
+
+    $blackoutEvent = collect($events)->firstWhere('extendedProps.type', 'blackout');
+    expect($blackoutEvent)->not->toBeNull();
+    expect($blackoutEvent['display'] ?? null)->toBe('background');
+});
+
+test('pdf generation job stores the pdf and marks the artifact as sent', function () {
+    Storage::fake('local');
+
+    $reservation = Reservation::factory()->create();
+
+    $artifact = ReservationArtifact::factory()->create([
+        'reservation_id' => $reservation->id,
+        'kind' => ReservationArtifactKind::Pdf,
+        'status' => ReservationArtifactStatus::Pending,
+        'payload' => ['template' => 'default'],
+    ]);
+
+    (new GenerateReservationPdf($artifact->id))->handle(app(\App\Actions\Settings\SettingsService::class));
+
+    $artifact->refresh();
+
+    expect($artifact->status)->toBe(ReservationArtifactStatus::Sent);
+    expect($artifact->payload['path'] ?? null)->toBeString();
+
+    Storage::disk('local')->assertExists((string) $artifact->payload['path']);
+});
+
+test('email sending job sends the mailable and marks the artifact as sent', function () {
+    Mail::fake();
+    Storage::fake('local');
+
+    $reservation = Reservation::factory()->create();
+
+    $pdfPath = "reservations/{$reservation->id}/reservation.pdf";
+    Storage::disk('local')->put($pdfPath, 'pdf-bytes');
+
+    ReservationArtifact::factory()->create([
+        'reservation_id' => $reservation->id,
+        'kind' => ReservationArtifactKind::Pdf,
+        'status' => ReservationArtifactStatus::Sent,
+        'payload' => ['path' => $pdfPath, 'template' => 'default'],
+    ]);
+
+    $artifact = ReservationArtifact::factory()->create([
+        'reservation_id' => $reservation->id,
+        'kind' => ReservationArtifactKind::EmailStudent,
+        'status' => ReservationArtifactStatus::Pending,
+        'payload' => [
+            'event' => 'approved',
+            'to' => ['student@example.edu'],
+            'cc' => [],
+            'bcc' => [],
+        ],
+    ]);
+
+    (new SendReservationEmail($artifact->id))->handle(app(\App\Actions\Settings\SettingsService::class));
+
+    $artifact->refresh();
+    expect($artifact->status)->toBe(ReservationArtifactStatus::Sent);
+
+    Mail::assertSent(ReservationStatusMail::class, function (ReservationStatusMail $mail) use ($reservation): bool {
+        return $mail->reservation->id === $reservation->id
+            && $mail->event === 'approved'
+            && is_string($mail->attachmentPath)
+            && $mail->attachmentPath !== '';
+    });
 });

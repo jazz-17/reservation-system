@@ -11,6 +11,9 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Validation\ValidationException;
+use Spatie\Period\Boundaries;
+use Spatie\Period\Period;
+use Spatie\Period\Precision;
 
 class ReservationRulesService
 {
@@ -128,7 +131,10 @@ class ReservationRulesService
         $openAt = CarbonImmutable::parse($startsAtLocal->format('Y-m-d').' '.$day['open'], $startsAtLocal->getTimezone());
         $closeAt = CarbonImmutable::parse($startsAtLocal->format('Y-m-d').' '.$day['close'], $startsAtLocal->getTimezone());
 
-        if ($startsAtLocal->lessThan($openAt) || $endsAtLocal->greaterThan($closeAt)) {
+        $openingPeriod = Period::make($openAt, $closeAt, Precision::MINUTE(), Boundaries::EXCLUDE_END());
+        $requestedPeriod = Period::make($startsAtLocal, $endsAtLocal, Precision::MINUTE(), Boundaries::EXCLUDE_END());
+
+        if (! $openingPeriod->contains($requestedPeriod)) {
             throw ValidationException::withMessages([
                 'starts_at' => 'La fecha/hora está fuera del horario de atención.',
             ]);
@@ -220,15 +226,30 @@ class ReservationRulesService
 
     private function validateBlackouts(CarbonImmutable $startsAtUtc, CarbonImmutable $endsAtUtc): void
     {
-        $overlaps = Blackout::query()
+        $candidates = Blackout::query()
             ->where('starts_at', '<', $endsAtUtc)
             ->where('ends_at', '>', $startsAtUtc)
-            ->exists();
+            ->get(['starts_at', 'ends_at']);
 
-        if ($overlaps) {
-            throw ValidationException::withMessages([
-                'starts_at' => 'La fecha/hora está bloqueada por mantenimiento o feriado.',
-            ]);
+        if ($candidates->isEmpty()) {
+            return;
+        }
+
+        $requestedPeriod = Period::make($startsAtUtc, $endsAtUtc, Precision::MINUTE(), Boundaries::EXCLUDE_END());
+
+        foreach ($candidates as $blackout) {
+            $blackoutPeriod = Period::make(
+                $blackout->starts_at->setTimezone('UTC'),
+                $blackout->ends_at->setTimezone('UTC'),
+                Precision::MINUTE(),
+                Boundaries::EXCLUDE_END(),
+            );
+
+            if ($requestedPeriod->overlapsWith($blackoutPeriod)) {
+                throw ValidationException::withMessages([
+                    'starts_at' => 'La fecha/hora está bloqueada por mantenimiento o feriado.',
+                ]);
+            }
         }
     }
 
@@ -291,11 +312,27 @@ class ReservationRulesService
             $query->whereKeyNot($ignoreReservationId);
         }
 
-        if ($query->exists()) {
-            throw ValidationException::withMessages([
-                'starts_at' => 'Horario no disponible.',
-            ]);
+        $candidates = $query->get(['starts_at', 'ends_at']);
+
+        if ($candidates->isEmpty()) {
+            return;
+        }
+
+        $requestedPeriod = Period::make($startsAtUtc, $endsAtUtc, Precision::MINUTE(), Boundaries::EXCLUDE_END());
+
+        foreach ($candidates as $reservation) {
+            $reservationPeriod = Period::make(
+                $reservation->starts_at->setTimezone('UTC'),
+                $reservation->ends_at->setTimezone('UTC'),
+                Precision::MINUTE(),
+                Boundaries::EXCLUDE_END(),
+            );
+
+            if ($requestedPeriod->overlapsWith($reservationPeriod)) {
+                throw ValidationException::withMessages([
+                    'starts_at' => 'Horario no disponible.',
+                ]);
+            }
         }
     }
 }
-

@@ -112,6 +112,151 @@ const addBlock = (day: keyof PredefinedBlocks): void => {
 const removeBlock = (day: keyof PredefinedBlocks, index: number): void => {
     formState.predefined_blocks[day].splice(index, 1);
 };
+
+const bookingModeLabel = computed((): string => {
+    switch (formState.booking_mode) {
+        case 'fixed_duration':
+            return 'Duración fija';
+        case 'variable_duration':
+            return 'Duración variable';
+        case 'predefined_blocks':
+            return 'Bloques predefinidos';
+    }
+});
+
+const timeToMinutes = (value: string): number | null => {
+    const match = value.match(/^(\d{2}):(\d{2})$/);
+    if (!match) {
+        return null;
+    }
+
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+        return null;
+    }
+
+    return hours * 60 + minutes;
+};
+
+const minutesToTime = (minutesTotal: number): string => {
+    const minutes = Math.max(0, Math.floor(minutesTotal));
+    const hh = String(Math.floor(minutes / 60)).padStart(2, '0');
+    const mm = String(minutes % 60).padStart(2, '0');
+
+    return `${hh}:${mm}`;
+};
+
+type SchedulePreviewRow = {
+    day: keyof OpeningHours;
+    open: string;
+    close: string;
+    summary: string;
+};
+
+const schedulePreview = computed<SchedulePreviewRow[]>(() => {
+    return days.map((day) => {
+        const open = formState.opening_hours[day]?.open ?? '00:00';
+        const close = formState.opening_hours[day]?.close ?? '00:00';
+
+        const openMin = timeToMinutes(open);
+        const closeMin = timeToMinutes(close);
+
+        if (openMin === null || closeMin === null || closeMin <= openMin) {
+            return { day, open, close, summary: 'Cerrado' };
+        }
+
+        const step = Math.max(1, Number(formState.slot_step_minutes) || 1);
+
+        if (formState.booking_mode === 'predefined_blocks') {
+            const count = formState.predefined_blocks?.[day]?.length ?? 0;
+            return { day, open, close, summary: `${count} bloque(s)` };
+        }
+
+        if (formState.booking_mode === 'fixed_duration') {
+            const duration = Math.max(
+                1,
+                Number(formState.slot_duration_minutes) || 1,
+            );
+            const lastStart = closeMin - duration;
+            if (lastStart < openMin) {
+                return {
+                    day,
+                    open,
+                    close,
+                    summary: `Sin slots (duración ${duration} min)`,
+                };
+            }
+
+            const count = Math.floor((lastStart - openMin) / step) + 1;
+
+            return {
+                day,
+                open,
+                close,
+                summary: `${count} slot(s) — último inicio ${minutesToTime(
+                    lastStart,
+                )}`,
+            };
+        }
+
+        const minDuration = Math.max(
+            1,
+            Number(formState.min_duration_minutes) || 1,
+        );
+        const lastStart = closeMin - minDuration;
+        if (lastStart < openMin) {
+            return {
+                day,
+                open,
+                close,
+                summary: `Sin inicios (mín. ${minDuration} min)`,
+            };
+        }
+
+        const count = Math.floor((lastStart - openMin) / step) + 1;
+
+        return {
+            day,
+            open,
+            close,
+            summary: `${count} inicio(s) — último inicio ${minutesToTime(
+                lastStart,
+            )}`,
+        };
+    });
+});
+
+const leadTimePreview = computed(() => {
+    const minHours = Math.max(0, Number(formState.lead_time_min_hours) || 0);
+    const maxDays = Math.max(0, Number(formState.lead_time_max_days) || 0);
+
+    const now = new Date();
+    const earliest = new Date(now.getTime() + minHours * 60 * 60 * 1000);
+    const latest = new Date(now.getTime() + maxDays * 24 * 60 * 60 * 1000);
+
+    const dateTimeFormatter = new Intl.DateTimeFormat('es-PE', {
+        timeZone: formState.timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+
+    const dateFormatter = new Intl.DateTimeFormat('es-PE', {
+        timeZone: formState.timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    });
+
+    return {
+        earliest: dateTimeFormatter.format(earliest),
+        latest: dateFormatter.format(latest),
+    };
+});
 </script>
 
 <template>
@@ -201,6 +346,32 @@ const removeBlock = (day: keyof PredefinedBlocks, index: number): void => {
                                 class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                             />
                             <InputError :message="errors.slot_step_minutes" />
+                        </div>
+
+                        <div class="grid gap-1">
+                            <label class="text-sm" for="lead_time_min_hours"
+                                >Anticipación mínima (h)</label
+                            >
+                            <input
+                                id="lead_time_min_hours"
+                                v-model.number="formState.lead_time_min_hours"
+                                type="number"
+                                class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                            />
+                            <InputError :message="errors.lead_time_min_hours" />
+                        </div>
+
+                        <div class="grid gap-1">
+                            <label class="text-sm" for="lead_time_max_days"
+                                >Anticipación máxima (días)</label
+                            >
+                            <input
+                                id="lead_time_max_days"
+                                v-model.number="formState.lead_time_max_days"
+                                type="number"
+                                class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                            />
+                            <InputError :message="errors.lead_time_max_days" />
                         </div>
 
                         <div class="grid gap-1">
@@ -333,6 +504,22 @@ const removeBlock = (day: keyof PredefinedBlocks, index: number): void => {
                     <InputError :message="errors.opening_hours" />
                 </div>
 
+                <div class="rounded-lg border border-border/60 p-4">
+                    <div class="mb-3 text-sm font-medium">PDF</div>
+                    <div class="grid gap-1 md:max-w-md">
+                        <label class="text-sm" for="pdf_template"
+                            >Plantilla activa</label
+                        >
+                        <input
+                            id="pdf_template"
+                            v-model="formState.pdf_template"
+                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                            placeholder="default"
+                        />
+                        <InputError :message="errors.pdf_template" />
+                    </div>
+                </div>
+
                 <div
                     v-if="formState.booking_mode === 'predefined_blocks'"
                     class="rounded-lg border border-border/60 p-4"
@@ -446,11 +633,67 @@ const removeBlock = (day: keyof PredefinedBlocks, index: number): void => {
                                 class="text-sm"
                                 for="notify_student_on_approval"
                             >
-                                Notificar al estudiante
+                                Notificar al estudiante (cambios de estado)
                             </label>
                             <InputError
                                 :message="errors.notify_student_on_approval"
                             />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-lg border border-border/60 p-4">
+                    <div class="mb-3 text-sm font-medium">Previsualización</div>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div class="rounded-md border border-border/60 p-3">
+                            <div class="text-xs text-muted-foreground">
+                                Modo de reserva
+                            </div>
+                            <div class="text-sm font-medium">
+                                {{ bookingModeLabel }}
+                            </div>
+                            <div class="mt-2 text-xs text-muted-foreground">
+                                Ventana de reserva (según zona horaria)
+                            </div>
+                            <div class="text-sm">
+                                Desde {{ leadTimePreview.earliest }}<br />
+                                Hasta {{ leadTimePreview.latest }}
+                            </div>
+                            <div class="mt-2 text-xs text-muted-foreground">
+                                Plantilla PDF
+                            </div>
+                            <div class="text-sm">
+                                {{ formState.pdf_template || '—' }}
+                            </div>
+                        </div>
+
+                        <div class="overflow-hidden rounded-md border border-border/60">
+                            <table class="w-full text-sm">
+                                <thead class="bg-muted/50 text-left">
+                                    <tr>
+                                        <th class="px-3 py-2">Día</th>
+                                        <th class="px-3 py-2">Horario</th>
+                                        <th class="px-3 py-2">Resumen</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr
+                                        v-for="row in schedulePreview"
+                                        :key="row.day"
+                                        class="border-t border-border/60"
+                                    >
+                                        <td class="px-3 py-2">
+                                            {{ dayLabels[row.day] }}
+                                        </td>
+                                        <td class="px-3 py-2">
+                                            {{ row.open }}–{{ row.close }}
+                                        </td>
+                                        <td class="px-3 py-2">
+                                            {{ row.summary }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
