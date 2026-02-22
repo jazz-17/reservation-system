@@ -35,7 +35,7 @@ import { index as adminHistory } from '@/routes/admin/history';
 import { index as adminRequests } from '@/routes/admin/requests';
 import { index as adminSchools } from '@/routes/admin/schools';
 import { edit as adminSettings } from '@/routes/admin/settings';
-import { publicMethod as publicCalendar } from '@/routes/calendar';
+import { index as calendarIndex } from '@/routes/calendar';
 import {
     index as reservationsIndex,
     create as reservationsCreate,
@@ -54,7 +54,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Calendario',
-        href: publicCalendar(),
+        href: calendarIndex(),
         icon: CalendarDays,
     },
     {
