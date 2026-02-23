@@ -7,6 +7,7 @@ use App\Models\Faculty;
 use App\Models\ProfessionalSchool;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -35,34 +36,40 @@ class DatabaseSeeder extends Seeder
             ['code' => 'ep_software', 'active' => true, 'base_year_min' => $schoolMin, 'base_year_max' => $schoolMax],
         );
 
-        User::factory()->create([
-            'name' => 'Admin',
-            'email' => 'admin@example.com',
-            'role' => UserRole::Admin,
-            'professional_school_id' => null,
-            'base_year' => null,
-        ]);
+        $defaultPassword = Hash::make('password');
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'role' => UserRole::Student,
-            'professional_school_id' => $systemsSchool->id,
-            'base_year' => 2022,
-        ]);
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'estudiante@example.com',
-            'role' => UserRole::Student,
-            'professional_school_id' => $systemsSchool->id,
-            'base_year' => 2022,
-        ]);
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'estudiante2@example.com',
-            'role' => UserRole::Student,
-            'professional_school_id' => $systemsSchool->id,
-            'base_year' => 2022,
-        ]);
+        User::query()->updateOrCreate(
+            ['email' => 'admin@example.com'],
+            [
+                'name' => 'Admin',
+                'first_name' => 'Admin',
+                'last_name' => 'User',
+                'role' => UserRole::Admin,
+                'professional_school_id' => null,
+                'base_year' => null,
+                'password' => $defaultPassword,
+            ],
+        );
+
+        $students = [
+            ['email' => 'test@example.com', 'first_name' => 'Test', 'last_name' => 'User'],
+            ['email' => 'estudiante@example.com', 'first_name' => 'Estudiante', 'last_name' => 'Uno'],
+            ['email' => 'estudiante2@example.com', 'first_name' => 'Estudiante', 'last_name' => 'Dos'],
+        ];
+
+        foreach ($students as $student) {
+            User::query()->updateOrCreate(
+                ['email' => $student['email']],
+                [
+                    'name' => "{$student['first_name']} {$student['last_name']}",
+                    'first_name' => $student['first_name'],
+                    'last_name' => $student['last_name'],
+                    'role' => UserRole::Student,
+                    'professional_school_id' => $systemsSchool->id,
+                    'base_year' => 2022,
+                    'password' => $defaultPassword,
+                ],
+            );
+        }
     }
 }
