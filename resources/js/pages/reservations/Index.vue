@@ -6,6 +6,15 @@ import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableEmpty,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatDateTime } from '@/lib/formatters';
 import { fetchJson } from '@/lib/http';
@@ -102,35 +111,52 @@ const cancel = (reservationId: number): void => {
                 </Link>
             </div>
 
-            <div
-                v-if="isLoading"
-                class="overflow-hidden rounded-lg border border-border/60"
-            >
-                <div class="border-b border-border/60 px-4 py-3">
-                    <Skeleton class="h-4 w-28" />
+            <div v-if="isLoading" class="flex flex-col gap-4">
+                <div class="border-b border-border/60 px-1 py-3 text-sm font-medium">
+                    Reservas activas
                 </div>
-                <div
-                    v-for="i in 3"
-                    :key="i"
-                    class="flex items-center gap-4 border-t border-border/60 px-4 py-3 first:border-t-0"
-                >
-                    <Skeleton class="h-4 w-20" />
-                    <Skeleton class="h-4 w-36" />
-                    <Skeleton class="h-4 w-36" />
-                    <Skeleton class="ml-auto h-7 w-16" />
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Estado</TableHead>
+                            <TableHead>Inicio</TableHead>
+                            <TableHead>Fin</TableHead>
+                            <TableHead />
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow v-for="i in 3" :key="i">
+                            <TableCell><Skeleton class="h-4 w-20" /></TableCell>
+                            <TableCell><Skeleton class="h-4 w-36" /></TableCell>
+                            <TableCell><Skeleton class="h-4 w-36" /></TableCell>
+                            <TableCell class="text-right"><Skeleton class="ml-auto h-7 w-16" /></TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+
+                <div class="border-b border-border/60 px-1 py-3 text-sm font-medium">
+                    Historial
                 </div>
-                <div class="border-y border-border/60 px-4 py-3">
-                    <Skeleton class="h-4 w-16" />
-                </div>
-                <div
-                    v-for="i in 2"
-                    :key="i"
-                    class="flex items-center gap-4 border-t border-border/60 px-4 py-3 first:border-t-0"
-                >
-                    <Skeleton class="h-4 w-20" />
-                    <Skeleton class="h-4 w-36" />
-                    <Skeleton class="h-4 w-36" />
-                </div>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Estado</TableHead>
+                            <TableHead>Inicio</TableHead>
+                            <TableHead>Fin</TableHead>
+                            <TableHead>Motivo</TableHead>
+                            <TableHead />
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow v-for="i in 2" :key="i">
+                            <TableCell><Skeleton class="h-4 w-20" /></TableCell>
+                            <TableCell><Skeleton class="h-4 w-36" /></TableCell>
+                            <TableCell><Skeleton class="h-4 w-36" /></TableCell>
+                            <TableCell><Skeleton class="h-4 w-24" /></TableCell>
+                            <TableCell />
+                        </TableRow>
+                    </TableBody>
+                </Table>
             </div>
 
             <div
@@ -140,38 +166,34 @@ const cancel = (reservationId: number): void => {
                 No se pudieron cargar tus reservas.
             </div>
 
-            <div
-                v-else
-                class="overflow-hidden rounded-lg border border-border/60"
-            >
-                <div class="border-b border-border/60 px-4 py-3 text-sm font-medium">
+            <div v-else class="flex flex-col gap-4">
+                <div class="border-b border-border/60 px-1 py-3 text-sm font-medium">
                     Reservas activas
                 </div>
-                <table class="w-full text-sm">
-                    <thead class="bg-muted/50 text-left">
-                        <tr>
-                            <th class="px-4 py-3">Estado</th>
-                            <th class="px-4 py-3">Inicio</th>
-                            <th class="px-4 py-3">Fin</th>
-                            <th class="px-4 py-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Estado</TableHead>
+                            <TableHead>Inicio</TableHead>
+                            <TableHead>Fin</TableHead>
+                            <TableHead />
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow
                             v-for="r in activeReservations"
                             :key="r.id"
-                            class="border-t border-border/60"
                         >
-                            <td class="px-4 py-3">
+                            <TableCell>
                                 <StatusBadge :status="r.status" />
-                            </td>
-                            <td class="px-4 py-3">
+                            </TableCell>
+                            <TableCell>
                                 {{ formatDateTime(r.starts_at) }}
-                            </td>
-                            <td class="px-4 py-3">
+                            </TableCell>
+                            <TableCell>
                                 {{ formatDateTime(r.ends_at) }}
-                            </td>
-                            <td class="px-4 py-3 text-right">
+                            </TableCell>
+                            <TableCell class="text-right">
                                 <div class="flex justify-end gap-2">
                                     <a
                                         v-if="r.status === 'approved'"
@@ -204,51 +226,45 @@ const cancel = (reservationId: number): void => {
                                         </template>
                                     </ConfirmDialog>
                                 </div>
-                            </td>
-                        </tr>
-                        <tr v-if="activeReservations.length === 0">
-                            <td
-                                class="px-4 py-8 text-center text-muted-foreground"
-                                colspan="4"
-                            >
-                                No tienes reservas activas.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                            </TableCell>
+                        </TableRow>
+                        <TableEmpty v-if="activeReservations.length === 0" :colspan="4">
+                            No tienes reservas activas.
+                        </TableEmpty>
+                    </TableBody>
+                </Table>
 
-                <div class="border-y border-border/60 px-4 py-3 text-sm font-medium">
+                <div class="border-b border-border/60 px-1 py-3 text-sm font-medium">
                     Historial
                 </div>
-                <table class="w-full text-sm">
-                    <thead class="bg-muted/50 text-left">
-                        <tr>
-                            <th class="px-4 py-3">Estado</th>
-                            <th class="px-4 py-3">Inicio</th>
-                            <th class="px-4 py-3">Fin</th>
-                            <th class="px-4 py-3">Motivo</th>
-                            <th class="px-4 py-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Estado</TableHead>
+                            <TableHead>Inicio</TableHead>
+                            <TableHead>Fin</TableHead>
+                            <TableHead>Motivo</TableHead>
+                            <TableHead />
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow
                             v-for="r in historicalReservations"
                             :key="r.id"
-                            class="border-t border-border/60"
                         >
-                            <td class="px-4 py-3">
+                            <TableCell>
                                 <StatusBadge :status="r.status" />
-                            </td>
-                            <td class="px-4 py-3">
+                            </TableCell>
+                            <TableCell>
                                 {{ formatDateTime(r.starts_at) }}
-                            </td>
-                            <td class="px-4 py-3">
+                            </TableCell>
+                            <TableCell>
                                 {{ formatDateTime(r.ends_at) }}
-                            </td>
-                            <td class="px-4 py-3">
+                            </TableCell>
+                            <TableCell>
                                 {{ reasonLabel(r) }}
-                            </td>
-                            <td class="px-4 py-3 text-right">
+                            </TableCell>
+                            <TableCell class="text-right">
                                 <a
                                     v-if="r.status === 'approved'"
                                     :href="reservationPdf(r.id).url"
@@ -258,18 +274,13 @@ const cancel = (reservationId: number): void => {
                                 >
                                     PDF
                                 </a>
-                            </td>
-                        </tr>
-                        <tr v-if="historicalReservations.length === 0">
-                            <td
-                                class="px-4 py-8 text-center text-muted-foreground"
-                                colspan="5"
-                            >
-                                Sin historial.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                            </TableCell>
+                        </TableRow>
+                        <TableEmpty v-if="historicalReservations.length === 0" :colspan="5">
+                            Sin historial.
+                        </TableEmpty>
+                    </TableBody>
+                </Table>
             </div>
     </div>
 </template>

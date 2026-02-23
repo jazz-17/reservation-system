@@ -7,8 +7,8 @@ import type {
 import esLocale from '@fullcalendar/core/locales/es';
 import interactionPlugin from '@fullcalendar/interaction';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import FullCalendar from '@fullcalendar/vue3';
 import { Form, Head, Link, usePage } from '@inertiajs/vue3';
+import AppCalendar from '@/components/AppCalendar.vue';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { computed, nextTick, ref, watch } from 'vue';
@@ -267,14 +267,14 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     },
 }));
 
-const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null);
+const calendarRef = ref<InstanceType<typeof AppCalendar> | null>(null);
 
 watch(selectedDate, (date) => {
     if (isSyncingFromCalendar.value) {
         return;
     }
 
-    const api = calendarRef.value?.getApi();
+    const api = calendarRef.value?.getApi?.();
     if (!api) {
         return;
     }
@@ -329,16 +329,44 @@ watch(selectedDate, (date) => {
                     No se pudo cargar la disponibilidad.
                 </div>
 
-                <div class="calendar rounded-lg border border-border/60 p-2">
-                    <Skeleton v-if="isLoading" class="h-[560px] rounded-md" />
+                <AppCalendar
+                    ref="calendarRef"
+                    :options="calendarOptions"
+                    :loading="isLoading"
+                    no-today-highlight
+                >
+                    <template #loading>
+                        <div class="flex h-full flex-col bg-card">
+                            <!-- Toolbar -->
+                            <div class="flex items-center justify-between px-1 py-3">
+                                <div class="flex gap-1">
+                                    <Skeleton class="h-8 w-9 rounded-md" />
+                                    <Skeleton class="h-8 w-9 rounded-md" />
+                                    <Skeleton class="ml-1 h-8 w-12 rounded-md" />
+                                </div>
+                                <Skeleton class="h-7 w-52 rounded-md" />
+                                <div class="w-24" />
+                            </div>
 
-                    <div :class="{ hidden: isLoading }">
-                        <FullCalendar
-                            ref="calendarRef"
-                            :options="calendarOptions"
-                        />
-                    </div>
-                </div>
+                            <!-- Day header -->
+                            <div class="border-t border-border/60 px-10 py-2">
+                                <Skeleton class="mx-auto h-4 w-12 rounded" />
+                            </div>
+
+                            <!-- Time slots -->
+                            <div class="flex flex-1 flex-col border-t border-border/60">
+                                <div
+                                    v-for="i in 10"
+                                    :key="i"
+                                    class="flex flex-1 items-start border-b border-border/60"
+                                >
+                                    <Skeleton class="m-2 h-3 w-6 shrink-0 rounded" />
+                                    <div class="flex-1" />
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </AppCalendar>
             </div>
 
             <div class="rounded-lg border border-border/60 p-4">
@@ -450,49 +478,3 @@ watch(selectedDate, (date) => {
         </div>
     </div>
 </template>
-
-<style scoped>
-.calendar :deep(.fc) {
-    --fc-page-bg-color: transparent;
-    --fc-border-color: color-mix(in oklab, var(--border) 60%, transparent);
-    --fc-neutral-bg-color: color-mix(in oklab, var(--muted) 60%, transparent);
-    --fc-today-bg-color: color-mix(in oklab, var(--accent) 55%, transparent);
-    --fc-event-border-color: transparent;
-    color: var(--foreground);
-}
-
-.calendar :deep(.fc .fc-button) {
-    border-radius: 0.375rem;
-    background: var(--background);
-    border: 1px solid var(--border);
-    color: var(--foreground);
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    font-size: 0.875rem;
-    font-weight: 500;
-    padding: 0.25rem 0.75rem;
-    transition:
-        background-color 0.15s,
-        color 0.15s;
-}
-
-.calendar :deep(.fc .fc-button:hover) {
-    background: var(--accent);
-    color: var(--accent-foreground);
-}
-
-.calendar :deep(.fc .fc-button:active),
-.calendar :deep(.fc .fc-button.fc-button-active) {
-    background: var(--accent);
-    color: var(--accent-foreground);
-}
-
-.calendar :deep(.fc .fc-button:disabled) {
-    opacity: 0.5;
-    pointer-events: none;
-}
-
-.calendar :deep(.fc .fc-button:focus) {
-    outline: none;
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
-}
-</style>

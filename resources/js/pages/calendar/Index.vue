@@ -3,8 +3,9 @@ import type { CalendarOptions, EventInput, EventSourceFuncArg } from '@fullcalen
 import esLocale from '@fullcalendar/core/locales/es';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import FullCalendar from '@fullcalendar/vue3';
 import { Head, router } from '@inertiajs/vue3';
+import AppCalendar from '@/components/AppCalendar.vue';
+import { Skeleton } from '@/components/ui/skeleton';
 import { computed, ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { fetchJson } from '@/lib/http';
@@ -79,7 +80,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 <template>
     <Head title="Calendario" />
 
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-4 p-4">
         <div class="flex flex-col gap-1">
             <h1 class="text-lg font-semibold">Calendario</h1>
             <p class="text-sm text-muted-foreground">
@@ -110,30 +111,41 @@ const calendarOptions = computed<CalendarOptions>(() => ({
             No se pudo cargar el calendario.
         </div>
 
-        <div class="calendar rounded-lg border border-border/60 p-2">
-            <div
-                v-if="isLoading"
-                class="px-2 pb-2 text-sm text-muted-foreground"
-            >
-                Cargando…
-            </div>
+        <AppCalendar :options="calendarOptions" clickable :loading="isLoading">
+            <template #loading>
+                <div class="flex h-full flex-col gap-0 bg-card">
+                    <!-- Toolbar -->
+                    <div class="flex items-center justify-between px-1 py-3">
+                        <div class="flex gap-1">
+                            <Skeleton class="h-8 w-9 rounded-md" />
+                            <Skeleton class="h-8 w-9 rounded-md" />
+                            <Skeleton class="ml-1 h-8 w-12 rounded-md" />
+                        </div>
+                        <Skeleton class="h-7 w-44 rounded-md" />
+                        <div class="w-24" />
+                    </div>
 
-            <FullCalendar :options="calendarOptions" />
-        </div>
+                    <!-- Day headers -->
+                    <div class="grid grid-cols-7 border-t border-border/60">
+                        <Skeleton v-for="i in 7" :key="i" class="mx-auto my-2 h-4 w-8 rounded" />
+                    </div>
+
+                    <!-- Week rows -->
+                    <div
+                        v-for="row in 5"
+                        :key="row"
+                        class="grid flex-1 grid-cols-7 border-t border-border/60"
+                    >
+                        <div
+                            v-for="col in 7"
+                            :key="col"
+                            class="border-r border-border/60 p-1.5 last:border-r-0"
+                        >
+                            <Skeleton class="h-4 w-5 rounded" />
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </AppCalendar>
     </div>
 </template>
-
-<style scoped>
-.calendar :deep(.fc) {
-    --fc-page-bg-color: transparent;
-    --fc-border-color: color-mix(in oklab, var(--border) 60%, transparent);
-    --fc-neutral-bg-color: color-mix(in oklab, var(--muted) 60%, transparent);
-    --fc-today-bg-color: color-mix(in oklab, var(--accent) 55%, transparent);
-    --fc-event-border-color: transparent;
-    color: var(--foreground);
-}
-
-.calendar :deep(.fc .fc-button) {
-    border-radius: 0.375rem;
-}
-</style>

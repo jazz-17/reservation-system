@@ -81,7 +81,6 @@ const decide = (action: 'approve' | 'reject', reservationId: number, reason?: st
         >
             No se pudieron cargar las solicitudes.
         </div>
-
         <div v-else class="grid gap-3">
             <div
                 v-for="r in data ?? []"
