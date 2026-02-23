@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,10 @@ type Reservation = {
 useBreadcrumbs([{ title: 'Mis reservas', href: reservationsIndex().url }]);
 
 const queryClient = useQueryClient();
+
+onMounted(() => {
+    queryClient.invalidateQueries({ queryKey: ['student-reservations'] });
+});
 
 const {
     isLoading,
