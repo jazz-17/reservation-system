@@ -50,5 +50,19 @@ class DatabaseSeeder extends Seeder
             'professional_school_id' => $systemsSchool->id,
             'base_year' => 2022,
         ]);
+        User::factory()->create([
+            'name' => 'Test User',
+            'email' => 'estudiante@example.com',
+            'role' => UserRole::Student,
+            'professional_school_id' => $systemsSchool->id,
+            'base_year' => 2022,
+        ]);
+        User::factory()->create([
+            'name' => 'Test User',
+            'email' => 'estudiante2@example.com',
+            'role' => UserRole::Student,
+            'professional_school_id' => $systemsSchool->id,
+            'base_year' => 2022,
+        ]);
     }
 }

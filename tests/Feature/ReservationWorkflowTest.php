@@ -241,6 +241,28 @@ test('admins cannot approve a reservation if a conflict exists at approval time'
         ->assertSessionHasErrors('starts_at');
 });
 
+test('admins cannot approve a reservation if its duration is invalid at approval time', function () {
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->create();
+
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->addDay()->setTime(10, 0)->setTimezone('UTC');
+
+    $pending = Reservation::factory()->create([
+        'user_id' => $user->id,
+        'status' => ReservationStatus::Pending,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHours(3),
+        'professional_school_id' => $user->professional_school_id,
+        'base_year' => $user->base_year,
+    ]);
+
+    $this->actingAs($admin);
+    $this->post(route('admin.requests.approve', $pending), ['reason' => null])
+        ->assertSessionHasErrors('ends_at');
+
+    expect($pending->refresh()->status)->toBe(ReservationStatus::Pending);
+});
+
 test('approving a reservation enqueues pdf and email artifacts', function () {
     Queue::fake();
 

@@ -111,10 +111,8 @@ const cancel = (reservationId: number): void => {
                 </Link>
             </div>
 
-            <div v-if="isLoading" class="flex flex-col gap-4">
-                <div class="border-b border-border/60 px-1 py-3 text-sm font-medium">
-                    Reservas activas
-                </div>
+            <div v-if="isLoading" class="flex flex-col gap-3">
+                <h2 class="text-sm font-medium">Reservas activas</h2>
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -134,9 +132,7 @@ const cancel = (reservationId: number): void => {
                     </TableBody>
                 </Table>
 
-                <div class="border-b border-border/60 px-1 py-3 text-sm font-medium">
-                    Historial
-                </div>
+                <h2 class="text-sm font-medium">Historial</h2>
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -166,10 +162,8 @@ const cancel = (reservationId: number): void => {
                 No se pudieron cargar tus reservas.
             </div>
 
-            <div v-else class="flex flex-col gap-4">
-                <div class="border-b border-border/60 px-1 py-3 text-sm font-medium">
-                    Reservas activas
-                </div>
+            <div v-else class="flex flex-col gap-3">
+                <h2 class="text-sm font-medium">Reservas activas</h2>
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -234,9 +228,7 @@ const cancel = (reservationId: number): void => {
                     </TableBody>
                 </Table>
 
-                <div class="border-b border-border/60 px-1 py-3 text-sm font-medium">
-                    Historial
-                </div>
+                <h2 class="text-sm font-medium">Historial</h2>
                 <Table>
                     <TableHeader>
                         <TableRow>

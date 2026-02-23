@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
+import { ref } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
@@ -23,6 +25,8 @@ useBreadcrumbs([
 
 const queryClient = useQueryClient();
 
+const actionError = ref<{ reservationId: number; message: string } | null>(null);
+
 const { data, isLoading, isError } = useQuery({
     queryKey: ['admin-requests'],
     queryFn: () =>
@@ -35,12 +39,21 @@ const decide = (action: 'approve' | 'reject', reservationId: number, reason?: st
     const route =
         action === 'approve' ? approve(reservationId) : reject(reservationId);
 
+    actionError.value = null;
+
     router.post(
         route.url,
         { reason: reason ?? null },
         {
             onSuccess: () => {
                 queryClient.invalidateQueries({ queryKey: ['admin-requests'] });
+            },
+            onError: (errors: Record<string, string>) => {
+                const message =
+                    Object.values(errors)[0] ??
+                    'No se pudo procesar la solicitud.';
+
+                actionError.value = { reservationId, message };
             },
         },
     );
@@ -143,6 +156,16 @@ const decide = (action: 'approve' | 'reject', reservationId: number, reason?: st
                         </ConfirmDialog>
                     </div>
                 </div>
+
+                <Alert
+                    v-if="actionError?.reservationId === r.id"
+                    variant="destructive"
+                    class="mt-3"
+                >
+                    <AlertDescription>
+                        {{ actionError.message }}
+                    </AlertDescription>
+                </Alert>
             </div>
 
             <div
