@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:97ff59a4e30e08d1c11bdcd9455e7832368c0572b576c9092cde2df4ae5552a3
     ports:
       - "5433:5432"
     environment:
@@ -17,7 +17,7 @@ services:
       retries: 5
 
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:02f2cc4882f8bf87c79a220ac958f58c700bdec0dfb9b9ea61b62fb0e8f1bfcf
     ports:
       - "6379:6379"
     healthcheck:
@@ -27,7 +27,7 @@ services:
       retries: 5
 
   mailpit:
-    image: axllent/mailpit
+    image: axllent/mailpit@sha256:7c38788069433ba9d2d9131abac8d17da0fb18f09b689207ec7a773dcb8d6eee
     ports:
       - "8025:8025"
       - "1025:1025"

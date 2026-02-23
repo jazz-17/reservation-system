@@ -38,11 +38,23 @@ cd reservation-system
 #      LOG_LEVEL=error
 
 # 4. Build and start
-docker compose -f docker-compose.prod.yml up -d --build
+#
+#    If you’re running “production” locally and don’t want to create /srv,
+#    you can override the storage mount:
+#    APP_STORAGE_PATH=./storage docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+#
+#    The containers run as uid 1000 (user "www"). Ensure storage is writable
+#    so queued jobs can generate/read PDFs.
+sudo mkdir -p /srv/reservation-system/storage
+sudo chown -R 1000:1000 /srv/reservation-system/storage
+
+#    IMPORTANT: `docker-compose.prod.yml` uses ${DB_PASSWORD} for Postgres init.
+#    Use --env-file so Compose reads DB_PASSWORD (and other variables) from .env.production.
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 
 # 5. Run migrations and seed
-docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
-docker compose -f docker-compose.prod.yml exec app php artisan db:seed --force
+docker compose --env-file .env.production -f docker-compose.prod.yml exec app php artisan migrate --force
+docker compose --env-file .env.production -f docker-compose.prod.yml exec app php artisan db:seed --force
 ```
 
 ### Deploying Changes
@@ -50,30 +62,30 @@ docker compose -f docker-compose.prod.yml exec app php artisan db:seed --force
 ```bash
 cd reservation-system
 git pull
-docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.production -f docker-compose.prod.yml exec app php artisan migrate --force
 ```
 
 ### Useful Commands
 
 ```bash
 # View logs
-docker compose -f docker-compose.prod.yml logs -f app
+docker compose --env-file .env.production -f docker-compose.prod.yml logs -f app
 
 # Restart services
-docker compose -f docker-compose.prod.yml restart
+docker compose --env-file .env.production -f docker-compose.prod.yml restart
 
 # Stop everything
-docker compose -f docker-compose.prod.yml down
+docker compose --env-file .env.production -f docker-compose.prod.yml down
 
 # Stop and delete database volume (destructive!)
-docker compose -f docker-compose.prod.yml down -v
+docker compose --env-file .env.production -f docker-compose.prod.yml down -v
 
 # Run artisan commands
-docker compose -f docker-compose.prod.yml exec app php artisan <command>
+docker compose --env-file .env.production -f docker-compose.prod.yml exec app php artisan <command>
 
 # Open a shell in the app container
-docker compose -f docker-compose.prod.yml exec app sh
+docker compose --env-file .env.production -f docker-compose.prod.yml exec app sh
 ```
 
 ### Connecting to Production DB (via SSH tunnel)

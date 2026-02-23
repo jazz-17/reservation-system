@@ -12,6 +12,8 @@ services:
     environment:
       - APP_ENV=production
     env_file: .env.production
+    volumes:
+      - "${APP_STORAGE_PATH:-/srv/reservation-system/storage}:/var/www/html/storage"
     restart: unless-stopped
 
   nginx:
@@ -26,7 +28,7 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:97ff59a4e30e08d1c11bdcd9455e7832368c0572b576c9092cde2df4ae5552a3
     environment:
       POSTGRES_DB: ${DB_DATABASE:-reservation_system}
       POSTGRES_USER: ${DB_USERNAME:-postgres}
@@ -41,7 +43,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:02f2cc4882f8bf87c79a220ac958f58c700bdec0dfb9b9ea61b62fb0e8f1bfcf
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -61,6 +63,8 @@ services:
       redis:
         condition: service_healthy
     env_file: .env.production
+    volumes:
+      - "${APP_STORAGE_PATH:-/srv/reservation-system/storage}:/var/www/html/storage"
     restart: unless-stopped
 
 volumes:
