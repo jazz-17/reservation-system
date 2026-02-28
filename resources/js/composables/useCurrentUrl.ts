@@ -18,9 +18,16 @@ export type UseCurrentUrlReturn = {
 };
 
 const page = usePage();
-const currentUrlReactive = computed(
-    () => new URL(page.url, window?.location.origin).pathname,
-);
+
+const pathnameFromUrl = (url: string): string => {
+    try {
+        return new URL(url, 'http://inertia.local').pathname;
+    } catch {
+        return url.split('?')[0] ?? '/';
+    }
+};
+
+const currentUrlReactive = computed(() => pathnameFromUrl(page.url));
 
 export function useCurrentUrl(): UseCurrentUrlReturn {
     function isCurrentUrl(
@@ -30,17 +37,7 @@ export function useCurrentUrl(): UseCurrentUrlReturn {
         const urlToCompare = currentUrl ?? currentUrlReactive.value;
         const urlString = toUrl(urlToCheck);
 
-        if (!urlString.startsWith('http')) {
-            return urlString === urlToCompare;
-        }
-
-        try {
-            const absoluteUrl = new URL(urlString);
-
-            return absoluteUrl.pathname === urlToCompare;
-        } catch {
-            return false;
-        }
+        return pathnameFromUrl(urlString) === urlToCompare;
     }
 
     function whenCurrentUrl(

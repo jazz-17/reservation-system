@@ -9,9 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
+import { store } from '@/routes/register';
 
 defineOptions({ layout: false });
-import { store } from '@/routes/register';
 
 type ProfessionalSchool = {
     id: number;
@@ -31,7 +31,9 @@ const props = defineProps<{
     faculties: Faculty[];
 }>();
 
-const selectedFacultyId = ref<string>(props.faculties[0] ? String(props.faculties[0].id) : '');
+const selectedFacultyId = ref<string>(
+    props.faculties[0] ? String(props.faculties[0].id) : '',
+);
 const selectedSchoolId = ref<string>('');
 const selectedBaseYear = ref<string>('');
 
@@ -60,7 +62,11 @@ const baseYears = computed<number[]>(() => {
     }
 
     const years: number[] = [];
-    for (let y = selectedSchool.value.base_year_min; y <= selectedSchool.value.base_year_max; y += 1) {
+    for (
+        let y = selectedSchool.value.base_year_min;
+        y <= selectedSchool.value.base_year_max;
+        y += 1
+    ) {
         years.push(y);
     }
 
@@ -173,9 +179,7 @@ watch(selectedSchoolId, () => {
                                 {{ s.name }}
                             </option>
                         </select>
-                        <InputError
-                            :message="errors.professional_school_id"
-                        />
+                        <InputError :message="errors.professional_school_id" />
                     </div>
                 </div>
 
@@ -190,9 +194,7 @@ watch(selectedSchoolId, () => {
                         class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                         :disabled="selectedSchool === null"
                     >
-                        <option value="" disabled>
-                            Selecciona una base
-                        </option>
+                        <option value="" disabled>Selecciona una base</option>
                         <option
                             v-for="y in baseYears"
                             :key="y"

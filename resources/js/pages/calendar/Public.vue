@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import type { CalendarOptions, EventInput, EventSourceFuncArg } from '@fullcalendar/core';
+import type {
+    CalendarOptions,
+    EventInput,
+    EventSourceFuncArg,
+} from '@fullcalendar/core';
 import esLocale from '@fullcalendar/core/locales/es';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Head, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import AppCalendar from '@/components/AppCalendar.vue';
 import { Skeleton } from '@/components/ui/skeleton';
-import { computed, ref } from 'vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { fetchJson } from '@/lib/http';
 import { availability } from '@/routes/api/public';
@@ -69,7 +73,11 @@ const calendarOptions = computed<CalendarOptions>(() => ({
             success(events);
         } catch (error) {
             loadError.value = true;
-            failure(error);
+            failure(
+                error instanceof Error
+                    ? error
+                    : new Error('No se pudo cargar el calendario.'),
+            );
         } finally {
             isLoading.value = false;
         }
@@ -127,7 +135,11 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 
                     <!-- Day headers -->
                     <div class="grid grid-cols-7 border-t border-border/60">
-                        <Skeleton v-for="i in 7" :key="i" class="mx-auto my-2 h-4 w-8 rounded" />
+                        <Skeleton
+                            v-for="i in 7"
+                            :key="i"
+                            class="mx-auto my-2 h-4 w-8 rounded"
+                        />
                     </div>
 
                     <!-- Week rows -->

@@ -8,16 +8,17 @@ import esLocale from '@fullcalendar/core/locales/es';
 import interactionPlugin from '@fullcalendar/interaction';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { Form, Head, Link, usePage } from '@inertiajs/vue3';
+import { computed, nextTick, ref, watch } from 'vue';
 import AppCalendar from '@/components/AppCalendar.vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { computed, nextTick, ref, watch } from 'vue';
-import InputError from '@/components/InputError.vue';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { fetchJson } from '@/lib/http';
 import { availability } from '@/routes/api/public';
 import {
     index as reservationsIndex,
+    create as reservationsCreate,
     store as storeReservation,
 } from '@/routes/reservations';
 
@@ -41,14 +42,14 @@ const props = defineProps<{
 
 useBreadcrumbs([
     { title: 'Mis reservas', href: reservationsIndex().url },
-    { title: 'Nueva solicitud', href: '/reservas/nueva' },
+    { title: 'Nueva solicitud', href: reservationsCreate().url },
 ]);
 
 const page = usePage();
 
 const dateFromQuery = computed((): string | null => {
-    const url = new URL(page.url, window.location.origin);
-    const value = url.searchParams.get('date');
+    const queryString = page.url.split('?')[1] ?? '';
+    const value = new URLSearchParams(queryString).get('date');
 
     if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
         return null;
@@ -246,7 +247,11 @@ const calendarOptions = computed<CalendarOptions>(() => ({
             success(events);
         } catch (error) {
             loadError.value = true;
-            failure(error);
+            failure(
+                error instanceof Error
+                    ? error
+                    : new Error('No se pudo cargar la disponibilidad.'),
+            );
         } finally {
             isLoading.value = false;
         }
@@ -338,11 +343,15 @@ watch(selectedDate, (date) => {
                     <template #loading>
                         <div class="flex h-full flex-col bg-card">
                             <!-- Toolbar -->
-                            <div class="flex items-center justify-between px-1 py-3">
+                            <div
+                                class="flex items-center justify-between px-1 py-3"
+                            >
                                 <div class="flex gap-1">
                                     <Skeleton class="h-8 w-9 rounded-md" />
                                     <Skeleton class="h-8 w-9 rounded-md" />
-                                    <Skeleton class="ml-1 h-8 w-12 rounded-md" />
+                                    <Skeleton
+                                        class="ml-1 h-8 w-12 rounded-md"
+                                    />
                                 </div>
                                 <Skeleton class="h-7 w-52 rounded-md" />
                                 <div class="w-24" />
@@ -354,13 +363,17 @@ watch(selectedDate, (date) => {
                             </div>
 
                             <!-- Time slots -->
-                            <div class="flex flex-1 flex-col border-t border-border/60">
+                            <div
+                                class="flex flex-1 flex-col border-t border-border/60"
+                            >
                                 <div
                                     v-for="i in 10"
                                     :key="i"
                                     class="flex flex-1 items-start border-b border-border/60"
                                 >
-                                    <Skeleton class="m-2 h-3 w-6 shrink-0 rounded" />
+                                    <Skeleton
+                                        class="m-2 h-3 w-6 shrink-0 rounded"
+                                    />
                                     <div class="flex-1" />
                                 </div>
                             </div>

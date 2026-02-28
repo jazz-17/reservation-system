@@ -20,13 +20,13 @@ useBreadcrumbs([
 <template>
     <Head title="Apariencia" />
 
-    <h1 class="sr-only">Appearance Settings</h1>
+    <h1 class="sr-only">Configuración de apariencia</h1>
 
     <div class="space-y-6">
         <Heading
             variant="small"
-            title="Appearance settings"
-            description="Update your account's appearance settings"
+            title="Apariencia"
+            description="Cambia el tema de la aplicación"
         />
         <AppearanceTabs />
     </div>

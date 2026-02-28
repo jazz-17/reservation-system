@@ -19,12 +19,13 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatBaseYear, formatDateTime } from '@/lib/formatters';
 import { fetchJson } from '@/lib/http';
 import { index as historyIndex } from '@/routes/admin/history';
+import { index as adminRequestsIndex } from '@/routes/admin/requests';
 import { history as adminHistory } from '@/routes/api/admin';
 import { show as reservationPdf } from '@/routes/reservations/pdf';
 import type { AdminReservation } from '@/types/admin';
 
 useBreadcrumbs([
-    { title: 'Admin', href: '/admin/solicitudes' },
+    { title: 'Admin', href: adminRequestsIndex().url },
     { title: 'Historial', href: historyIndex().url },
 ]);
 

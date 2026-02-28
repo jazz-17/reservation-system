@@ -8,6 +8,7 @@ import {
     index as artifactsIndex,
     retry as retryArtifact,
 } from '@/routes/admin/artifacts';
+import { index as adminRequestsIndex } from '@/routes/admin/requests';
 import type { Artifact } from '@/types/admin';
 
 const props = defineProps<{
@@ -15,7 +16,7 @@ const props = defineProps<{
 }>();
 
 useBreadcrumbs([
-    { title: 'Admin', href: '/admin/solicitudes' },
+    { title: 'Admin', href: adminRequestsIndex().url },
     { title: 'Reintentos', href: artifactsIndex().url },
 ]);
 

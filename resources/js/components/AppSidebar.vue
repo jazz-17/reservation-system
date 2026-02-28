@@ -2,18 +2,16 @@
 import { Link } from '@inertiajs/vue3';
 import { usePage } from '@inertiajs/vue3';
 import {
-    BookOpen,
     CalendarDays,
-    Folder,
     LayoutGrid,
     ListChecks,
     Settings,
     Shield,
     Ban,
+    BookOpen,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
-import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -116,19 +114,6 @@ const adminNavItems: NavItem[] = [
         icon: Shield,
     },
 ];
-
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repositorio',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentación',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
-];
 </script>
 
 <template>
@@ -147,7 +132,11 @@ const footerNavItems: NavItem[] = [
 
         <SidebarContent>
             <NavMain :items="mainNavItems" />
-            <NavMain v-if="isAdmin" :items="adminNavItems" label="Administración" />
+            <NavMain
+                v-if="isAdmin"
+                :items="adminNavItems"
+                label="Administración"
+            />
         </SidebarContent>
 
         <SidebarFooter>

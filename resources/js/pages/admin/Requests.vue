@@ -19,13 +19,15 @@ import { requests as adminRequests } from '@/routes/api/admin';
 import type { AdminReservation } from '@/types/admin';
 
 useBreadcrumbs([
-    { title: 'Admin', href: '/admin/solicitudes' },
+    { title: 'Admin', href: adminRequestsIndex().url },
     { title: 'Solicitudes', href: adminRequestsIndex().url },
 ]);
 
 const queryClient = useQueryClient();
 
-const actionError = ref<{ reservationId: number; message: string } | null>(null);
+const actionError = ref<{ reservationId: number; message: string } | null>(
+    null,
+);
 
 const { data, isLoading, isError } = useQuery({
     queryKey: ['admin-requests'],
@@ -35,7 +37,11 @@ const { data, isLoading, isError } = useQuery({
         ),
 });
 
-const decide = (action: 'approve' | 'reject', reservationId: number, reason?: string): void => {
+const decide = (
+    action: 'approve' | 'reject',
+    reservationId: number,
+    reason?: string,
+): void => {
     const route =
         action === 'approve' ? approve(reservationId) : reject(reservationId);
 
@@ -125,7 +131,9 @@ const decide = (action: 'approve' | 'reject', reservationId: number, reason?: st
                             title="Aprobar solicitud"
                             confirm-label="Aprobar"
                             input-label="Motivo (opcional)"
-                            @confirm="(reason) => decide('approve', r.id, reason)"
+                            @confirm="
+                                (reason) => decide('approve', r.id, reason)
+                            "
                         >
                             <template #trigger>
                                 <Button
@@ -142,7 +150,9 @@ const decide = (action: 'approve' | 'reject', reservationId: number, reason?: st
                             confirm-label="Rechazar"
                             variant="destructive"
                             input-label="Motivo (opcional)"
-                            @confirm="(reason) => decide('reject', r.id, reason)"
+                            @confirm="
+                                (reason) => decide('reject', r.id, reason)
+                            "
                         >
                             <template #trigger>
                                 <Button

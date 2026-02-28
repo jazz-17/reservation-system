@@ -2,7 +2,6 @@
 import { Head } from '@inertiajs/vue3';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { dashboard } from '@/routes';
-import { type BreadcrumbItem } from '@/types';
 import PlaceholderPattern from '../components/PlaceholderPattern.vue';
 
 useBreadcrumbs([

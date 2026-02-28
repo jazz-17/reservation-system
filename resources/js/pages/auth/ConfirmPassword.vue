@@ -13,10 +13,10 @@ defineOptions({ layout: false });
 
 <template>
     <AuthLayout
-        title="Confirm your password"
-        description="This is a secure area of the application. Please confirm your password before continuing."
+        title="Confirma tu contraseña"
+        description="Esta es un área segura. Confirma tu contraseña para continuar."
     >
-        <Head title="Confirm password" />
+        <Head title="Confirmar contraseña" />
 
         <Form
             v-bind="store.form()"
@@ -25,7 +25,7 @@ defineOptions({ layout: false });
         >
             <div class="space-y-6">
                 <div class="grid gap-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label for="password">Contraseña</Label>
                     <Input
                         id="password"
                         type="password"
@@ -46,7 +46,7 @@ defineOptions({ layout: false });
                         data-test="confirm-password-button"
                     >
                         <Spinner v-if="processing" />
-                        Confirm Password
+                        Confirmar contraseña
                     </Button>
                 </div>
             </div>

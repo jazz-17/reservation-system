@@ -18,6 +18,8 @@ const variantClasses = computed(() => {
             return 'border-transparent bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
         case 'cancelled':
             return 'border-transparent bg-muted text-muted-foreground';
+        default:
+            return 'border-transparent bg-muted text-muted-foreground';
     }
 });
 </script>

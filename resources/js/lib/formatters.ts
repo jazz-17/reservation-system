@@ -1,4 +1,8 @@
-import type { ArtifactKind, AuditEvent, ReservationStatus } from '@/types/admin';
+import type {
+    ArtifactKind,
+    AuditEvent,
+    ReservationStatus,
+} from '@/types/admin';
 
 /**
  * Format an ISO datetime string for display in es-PE locale.
@@ -6,7 +10,10 @@ import type { ArtifactKind, AuditEvent, ReservationStatus } from '@/types/admin'
  * By default includes date + time (hour:minute). Pass `{ seconds: true }`
  * to include seconds (used in the Audit log).
  */
-export function formatDateTime(iso: string, options?: { seconds?: boolean }): string {
+export function formatDateTime(
+    iso: string,
+    options?: { seconds?: boolean },
+): string {
     const d = new Date(iso);
 
     return new Intl.DateTimeFormat('es-PE', {

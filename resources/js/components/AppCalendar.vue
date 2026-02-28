@@ -20,7 +20,13 @@ defineExpose({
 </script>
 
 <template>
-    <Card class="app-calendar relative gap-0 py-0" :class="{ 'app-calendar--clickable': clickable, 'app-calendar--no-today': noTodayHighlight }">
+    <Card
+        class="app-calendar relative gap-0 py-0"
+        :class="{
+            'app-calendar--clickable': clickable,
+            'app-calendar--no-today': noTodayHighlight,
+        }"
+    >
         <CardContent class="relative p-2">
             <div v-if="loading" class="absolute inset-2 z-10 bg-card">
                 <slot name="loading">

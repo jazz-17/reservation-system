@@ -1,4 +1,8 @@
-export type ReservationStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export type ReservationStatus =
+    | 'pending'
+    | 'approved'
+    | 'rejected'
+    | 'cancelled';
 
 export type ArtifactKind = 'pdf' | 'email_admin' | 'email_student';
 

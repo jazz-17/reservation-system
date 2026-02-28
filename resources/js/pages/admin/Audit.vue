@@ -18,11 +18,12 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatAuditSubject, formatDateTime } from '@/lib/formatters';
 import { fetchJson } from '@/lib/http';
 import { index as auditIndex } from '@/routes/admin/audit';
+import { index as adminRequestsIndex } from '@/routes/admin/requests';
 import { audit as adminAudit } from '@/routes/api/admin';
 import type { AuditEvent } from '@/types/admin';
 
 useBreadcrumbs([
-    { title: 'Admin', href: '/admin/solicitudes' },
+    { title: 'Admin', href: adminRequestsIndex().url },
     { title: 'Auditoría', href: auditIndex().url },
 ]);
 
@@ -71,11 +72,7 @@ const eventTypes = computed(() => data.value?.eventTypes ?? []);
                         class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                     >
                         <option value="">Todos</option>
-                        <option
-                            v-for="t in eventTypes"
-                            :key="t"
-                            :value="t"
-                        >
+                        <option v-for="t in eventTypes" :key="t" :value="t">
                             {{ t }}
                         </option>
                     </select>
