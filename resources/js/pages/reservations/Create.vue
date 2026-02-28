@@ -15,12 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { fetchJson } from '@/lib/http';
-import { availability } from '@/routes/api/public';
-import {
-    index as reservationsIndex,
-    create as reservationsCreate,
-    store as storeReservation,
-} from '@/routes/reservations';
+import publicApiRoutes from '@/routes/api/public';
+import reservationsRoutes from '@/routes/reservations';
 
 type OpeningHours = Record<
     'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun',
@@ -41,8 +37,8 @@ const props = defineProps<{
 }>();
 
 useBreadcrumbs([
-    { title: 'Mis reservas', href: reservationsIndex().url },
-    { title: 'Nueva solicitud', href: reservationsCreate().url },
+    { title: 'Mis reservas', href: reservationsRoutes.index().url },
+    { title: 'Nueva solicitud', href: reservationsRoutes.create().url },
 ]);
 
 const page = usePage();
@@ -239,7 +235,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 
         try {
             const events = await fetchJson<CalendarEvent[]>(
-                availability.url({
+                publicApiRoutes.availability.url({
                     query: { start: info.startStr, end: info.endStr },
                 }),
             );
@@ -386,7 +382,7 @@ watch(selectedDate, (date) => {
                 <div class="mb-3 text-sm font-medium">Crear solicitud</div>
 
                 <Form
-                    v-bind="storeReservation.form()"
+                    v-bind="reservationsRoutes.store.form()"
                     v-slot="{ errors, processing }"
                     class="flex flex-col gap-3"
                 >
@@ -481,7 +477,7 @@ watch(selectedDate, (date) => {
                     </Button>
 
                     <Link
-                        :href="reservationsIndex().url"
+                        :href="reservationsRoutes.index().url"
                         class="text-sm text-muted-foreground underline underline-offset-4"
                     >
                         Volver

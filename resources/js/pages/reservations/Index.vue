@@ -18,13 +18,9 @@ import {
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatDateTime } from '@/lib/formatters';
 import { fetchJson } from '@/lib/http';
-import { reservations as studentReservations } from '@/routes/api/student';
-import {
-    cancel as cancelReservation,
-    create as createReservation,
-    index as reservationsIndex,
-} from '@/routes/reservations';
-import { show as reservationPdf } from '@/routes/reservations/pdf';
+import studentApiRoutes from '@/routes/api/student';
+import reservationsRoutes from '@/routes/reservations';
+import reservationPdfRoutes from '@/routes/reservations/pdf';
 import type { ReservationStatus } from '@/types/admin';
 
 type Reservation = {
@@ -36,7 +32,7 @@ type Reservation = {
     cancellation_reason?: string | null;
 };
 
-useBreadcrumbs([{ title: 'Mis reservas', href: reservationsIndex().url }]);
+useBreadcrumbs([{ title: 'Mis reservas', href: reservationsRoutes.index().url }]);
 
 const queryClient = useQueryClient();
 
@@ -51,7 +47,9 @@ const {
 } = useQuery({
     queryKey: ['student-reservations'],
     queryFn: () =>
-        fetchJson<{ data: Reservation[] }>(studentReservations.url()).then(
+        fetchJson<{ data: Reservation[] }>(
+            studentApiRoutes.reservations.url(),
+        ).then(
             (r) => r.data,
         ),
 });
@@ -90,7 +88,7 @@ const historicalReservations = computed(() =>
 
 const cancel = (reservationId: number): void => {
     router.post(
-        cancelReservation(reservationId).url,
+        reservationsRoutes.cancel(reservationId).url,
         {},
         {
             onSuccess: () => {
@@ -110,7 +108,7 @@ const cancel = (reservationId: number): void => {
         <div class="flex items-center justify-between gap-3">
             <h1 class="text-lg font-semibold">Mis reservas</h1>
             <Link
-                :href="createReservation().url"
+                :href="reservationsRoutes.create().url"
                 class="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground"
             >
                 Nueva solicitud
@@ -196,7 +194,7 @@ const cancel = (reservationId: number): void => {
                             <div class="flex justify-end gap-2">
                                 <a
                                     v-if="r.status === 'approved'"
-                                    :href="reservationPdf(r.id).url"
+                                    :href="reservationPdfRoutes.show(r.id).url"
                                     class="rounded-md border border-border/60 px-3 py-1.5 text-xs"
                                     target="_blank"
                                     rel="noopener"
@@ -264,7 +262,7 @@ const cancel = (reservationId: number): void => {
                         <TableCell class="text-right">
                             <a
                                 v-if="r.status === 'approved'"
-                                :href="reservationPdf(r.id).url"
+                                :href="reservationPdfRoutes.show(r.id).url"
                                 class="rounded-md border border-border/60 px-3 py-1.5 text-xs"
                                 target="_blank"
                                 rel="noopener"

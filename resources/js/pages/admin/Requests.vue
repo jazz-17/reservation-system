@@ -10,17 +10,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatBaseYear, formatDateTime } from '@/lib/formatters';
 import { fetchJson } from '@/lib/http';
-import {
-    approve,
-    reject,
-    index as adminRequestsIndex,
-} from '@/routes/admin/requests';
-import { requests as adminRequests } from '@/routes/api/admin';
+import adminRequestsRoutes from '@/routes/admin/requests';
+import adminApiRoutes from '@/routes/api/admin';
 import type { AdminReservation } from '@/types/admin';
 
 useBreadcrumbs([
-    { title: 'Admin', href: adminRequestsIndex().url },
-    { title: 'Solicitudes', href: adminRequestsIndex().url },
+    { title: 'Admin', href: adminRequestsRoutes.index().url },
+    { title: 'Solicitudes', href: adminRequestsRoutes.index().url },
 ]);
 
 const queryClient = useQueryClient();
@@ -32,7 +28,7 @@ const actionError = ref<{ reservationId: number; message: string } | null>(
 const { data, isLoading, isError } = useQuery({
     queryKey: ['admin-requests'],
     queryFn: () =>
-        fetchJson<{ data: AdminReservation[] }>(adminRequests.url()).then(
+        fetchJson<{ data: AdminReservation[] }>(adminApiRoutes.requests.url()).then(
             (r) => r.data,
         ),
 });
@@ -43,7 +39,9 @@ const decide = (
     reason?: string,
 ): void => {
     const route =
-        action === 'approve' ? approve(reservationId) : reject(reservationId);
+        action === 'approve'
+            ? adminRequestsRoutes.approve(reservationId)
+            : adminRequestsRoutes.reject(reservationId);
 
     actionError.value = null;
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { dashboard, login, register } from '@/routes';
+import * as appRoutes from '@/routes';
 
 const page = usePage();
 </script>
@@ -20,19 +20,19 @@ const page = usePage();
                 <nav class="flex items-center gap-3 text-sm">
                     <template v-if="page.props.auth?.user">
                         <Link
-                            :href="dashboard()"
+                            :href="appRoutes.dashboard()"
                             class="underline underline-offset-4"
                             >Dashboard</Link
                         >
                     </template>
                     <template v-else>
                         <Link
-                            :href="login()"
+                            :href="appRoutes.login()"
                             class="underline underline-offset-4"
                             >Iniciar sesión</Link
                         >
                         <Link
-                            :href="register()"
+                            :href="appRoutes.register()"
                             class="underline underline-offset-4"
                             >Registrarse</Link
                         >

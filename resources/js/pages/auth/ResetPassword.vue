@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
-import { update } from '@/routes/password';
+import passwordRoutes from '@/routes/password';
 
 defineOptions({ layout: false });
 
@@ -27,7 +27,7 @@ const inputEmail = ref(props.email);
         <Head title="Restablecer contraseña" />
 
         <Form
-            v-bind="update.form()"
+            v-bind="passwordRoutes.update.form()"
             :transform="(data) => ({ ...data, token, email })"
             :reset-on-success="['password', 'password_confirmation']"
             v-slot="{ errors, processing }"

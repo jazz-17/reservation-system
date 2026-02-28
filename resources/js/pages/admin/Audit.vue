@@ -17,14 +17,14 @@ import {
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatAuditSubject, formatDateTime } from '@/lib/formatters';
 import { fetchJson } from '@/lib/http';
-import { index as auditIndex } from '@/routes/admin/audit';
-import { index as adminRequestsIndex } from '@/routes/admin/requests';
-import { audit as adminAudit } from '@/routes/api/admin';
+import adminAuditRoutes from '@/routes/admin/audit';
+import adminRequestsRoutes from '@/routes/admin/requests';
+import adminApiRoutes from '@/routes/api/admin';
 import type { AuditEvent } from '@/types/admin';
 
 useBreadcrumbs([
-    { title: 'Admin', href: adminRequestsIndex().url },
-    { title: 'Auditoría', href: auditIndex().url },
+    { title: 'Admin', href: adminRequestsRoutes.index().url },
+    { title: 'Auditoría', href: adminAuditRoutes.index().url },
 ]);
 
 const eventType = ref<string>('');
@@ -43,7 +43,7 @@ const { data, isLoading, isError } = useQuery({
     queryKey: ['admin-audit', queryOptions],
     queryFn: () =>
         fetchJson<{ data: AuditEvent[]; eventTypes: string[] }>(
-            adminAudit.url({ query: queryOptions.value }),
+            adminApiRoutes.audit.url({ query: queryOptions.value }),
         ),
 });
 

@@ -7,8 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
-import { login } from '@/routes';
-import { email } from '@/routes/password';
+import * as appRoutes from '@/routes';
+import passwordRoutes from '@/routes/password';
 
 defineOptions({ layout: false });
 
@@ -32,7 +32,10 @@ defineProps<{
         </div>
 
         <div class="space-y-6">
-            <Form v-bind="email.form()" v-slot="{ errors, processing }">
+            <Form
+                v-bind="passwordRoutes.email.form()"
+                v-slot="{ errors, processing }"
+            >
                 <div class="grid gap-2">
                     <Label for="email">Correo</Label>
                     <Input
@@ -60,7 +63,7 @@ defineProps<{
 
             <div class="space-x-1 text-center text-sm text-muted-foreground">
                 <span>O vuelve a</span>
-                <TextLink :href="login()">iniciar sesión</TextLink>
+                <TextLink :href="appRoutes.login()">iniciar sesión</TextLink>
             </div>
         </div>
     </AuthLayout>

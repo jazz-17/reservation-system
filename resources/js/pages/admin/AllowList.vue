@@ -5,12 +5,8 @@ import AdminSection from '@/components/admin/AdminSection.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
-import {
-    index as allowListIndex,
-    importMethod as importAllowList,
-    template as allowListTemplate,
-} from '@/routes/admin/allow-list';
-import { index as adminRequestsIndex } from '@/routes/admin/requests';
+import adminAllowListRoutes from '@/routes/admin/allow-list';
+import adminRequestsRoutes from '@/routes/admin/requests';
 import type { ImportReport } from '@/types/admin';
 
 const props = defineProps<{
@@ -22,8 +18,8 @@ const page = usePage<{ flash?: { import_report?: ImportReport | null } }>();
 const report = page.props.flash?.import_report ?? null;
 
 useBreadcrumbs([
-    { title: 'Admin', href: adminRequestsIndex().url },
-    { title: 'Allow-list', href: allowListIndex().url },
+    { title: 'Admin', href: adminRequestsRoutes.index().url },
+    { title: 'Allow-list', href: adminAllowListRoutes.index().url },
 ]);
 </script>
 
@@ -64,7 +60,7 @@ useBreadcrumbs([
             <div class="flex items-center justify-between gap-3">
                 <div class="text-sm font-medium">Importar</div>
                 <a
-                    :href="allowListTemplate().url"
+                    :href="adminAllowListRoutes.template().url"
                     class="rounded-md border border-border/60 px-3 py-2 text-xs font-medium"
                     download
                 >
@@ -79,7 +75,7 @@ useBreadcrumbs([
             </p>
 
             <Form
-                v-bind="importAllowList.form()"
+                v-bind="adminAllowListRoutes.importMethod.form()"
                 enctype="multipart/form-data"
                 v-slot="{ errors, processing }"
                 class="mt-4 grid gap-3"

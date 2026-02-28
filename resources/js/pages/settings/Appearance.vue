@@ -5,14 +5,14 @@ import Heading from '@/components/Heading.vue';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { edit } from '@/routes/appearance';
+import appearanceRoutes from '@/routes/appearance';
 
 defineOptions({ layout: [AppLayout, SettingsLayout] });
 
 useBreadcrumbs([
     {
         title: 'Apariencia',
-        href: edit().url,
+        href: appearanceRoutes.edit().url,
     },
 ]);
 </script>

@@ -13,11 +13,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
-import { index as adminRequestsIndex } from '@/routes/admin/requests';
-import {
-    update as updateSettings,
-    edit as editSettings,
-} from '@/routes/admin/settings';
+import adminRequestsRoutes from '@/routes/admin/requests';
+import adminSettingsRoutes from '@/routes/admin/settings';
 import type { AdminSettings, DayKey } from '@/types/admin';
 
 const props = defineProps<{
@@ -25,8 +22,8 @@ const props = defineProps<{
 }>();
 
 useBreadcrumbs([
-    { title: 'Admin', href: adminRequestsIndex().url },
-    { title: 'Configuración', href: editSettings().url },
+    { title: 'Admin', href: adminRequestsRoutes.index().url },
+    { title: 'Configuración', href: adminSettingsRoutes.edit().url },
 ]);
 
 const days: DayKey[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -165,7 +162,7 @@ const leadTimePreview = computed(() => {
         />
 
         <Form
-            v-bind="updateSettings.form()"
+            v-bind="adminSettingsRoutes.update.form()"
             :transform="() => formState"
             v-slot="{ errors, processing }"
             class="grid gap-6"

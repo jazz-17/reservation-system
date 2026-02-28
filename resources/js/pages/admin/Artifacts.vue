@@ -4,11 +4,8 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatArtifactKind, formatDateTime } from '@/lib/formatters';
-import {
-    index as artifactsIndex,
-    retry as retryArtifact,
-} from '@/routes/admin/artifacts';
-import { index as adminRequestsIndex } from '@/routes/admin/requests';
+import adminArtifactsRoutes from '@/routes/admin/artifacts';
+import adminRequestsRoutes from '@/routes/admin/requests';
 import type { Artifact } from '@/types/admin';
 
 const props = defineProps<{
@@ -16,12 +13,12 @@ const props = defineProps<{
 }>();
 
 useBreadcrumbs([
-    { title: 'Admin', href: adminRequestsIndex().url },
-    { title: 'Reintentos', href: artifactsIndex().url },
+    { title: 'Admin', href: adminRequestsRoutes.index().url },
+    { title: 'Reintentos', href: adminArtifactsRoutes.index().url },
 ]);
 
 const retry = (id: number): void => {
-    router.post(retryArtifact(id).url);
+    router.post(adminArtifactsRoutes.retry(id).url);
 };
 </script>
 

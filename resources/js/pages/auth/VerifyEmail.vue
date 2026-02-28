@@ -4,8 +4,8 @@ import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
-import { logout } from '@/routes';
-import { send } from '@/routes/verification';
+import * as appRoutes from '@/routes';
+import verificationRoutes from '@/routes/verification';
 
 defineOptions({ layout: false });
 
@@ -29,7 +29,7 @@ defineProps<{
         </div>
 
         <Form
-            v-bind="send.form()"
+            v-bind="verificationRoutes.send.form()"
             class="space-y-6 text-center"
             v-slot="{ processing }"
         >
@@ -39,7 +39,7 @@ defineProps<{
             </Button>
 
             <TextLink
-                :href="logout()"
+                :href="appRoutes.logout()"
                 as="button"
                 class="mx-auto block text-sm"
             >

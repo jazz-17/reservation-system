@@ -18,15 +18,15 @@ import {
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatBaseYear, formatDateTime } from '@/lib/formatters';
 import { fetchJson } from '@/lib/http';
-import { index as historyIndex } from '@/routes/admin/history';
-import { index as adminRequestsIndex } from '@/routes/admin/requests';
-import { history as adminHistory } from '@/routes/api/admin';
-import { show as reservationPdf } from '@/routes/reservations/pdf';
+import adminHistoryRoutes from '@/routes/admin/history';
+import adminRequestsRoutes from '@/routes/admin/requests';
+import adminApiRoutes from '@/routes/api/admin';
+import reservationPdfRoutes from '@/routes/reservations/pdf';
 import type { AdminReservation } from '@/types/admin';
 
 useBreadcrumbs([
-    { title: 'Admin', href: adminRequestsIndex().url },
-    { title: 'Historial', href: historyIndex().url },
+    { title: 'Admin', href: adminRequestsRoutes.index().url },
+    { title: 'Historial', href: adminHistoryRoutes.index().url },
 ]);
 
 const status = ref<string>('');
@@ -45,7 +45,7 @@ const { data, isLoading, isError } = useQuery({
     queryKey: ['admin-history', queryOptions],
     queryFn: () =>
         fetchJson<{ data: AdminReservation[] }>(
-            adminHistory.url({ query: queryOptions.value }),
+            adminApiRoutes.history.url({ query: queryOptions.value }),
         ).then((r) => r.data),
 });
 </script>
@@ -166,7 +166,7 @@ const { data, isLoading, isError } = useQuery({
                     <TableCell class="text-right">
                         <a
                             v-if="r.status === 'approved'"
-                            :href="reservationPdf(r.id).url"
+                            :href="reservationPdfRoutes.show(r.id).url"
                             class="rounded-md border border-border/60 px-3 py-1.5 text-xs"
                             target="_blank"
                             rel="noopener"

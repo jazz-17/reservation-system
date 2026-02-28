@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
-import { login } from '@/routes';
-import { store } from '@/routes/register';
+import * as appRoutes from '@/routes';
+import registerRoutes from '@/routes/register';
 
 defineOptions({ layout: false });
 
@@ -96,7 +96,7 @@ watch(selectedSchoolId, () => {
         <Head title="Registro" />
 
         <Form
-            v-bind="store.form()"
+            v-bind="registerRoutes.store.form()"
             :reset-on-success="['password', 'password_confirmation']"
             v-slot="{ errors, processing }"
             class="flex flex-col gap-6"
@@ -278,7 +278,7 @@ watch(selectedSchoolId, () => {
             <div class="text-center text-sm text-muted-foreground">
                 ¿Ya tienes una cuenta?
                 <TextLink
-                    :href="login()"
+                    :href="appRoutes.login()"
                     class="underline underline-offset-4"
                     :tabindex="11"
                     >Iniciar sesión</TextLink

@@ -10,8 +10,8 @@ import { Label } from '@/components/ui/label';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { edit } from '@/routes/profile';
-import { send } from '@/routes/verification';
+import profileRoutes from '@/routes/profile';
+import verificationRoutes from '@/routes/verification';
 
 type Props = {
     mustVerifyEmail: boolean;
@@ -24,7 +24,7 @@ defineOptions({ layout: [AppLayout, SettingsLayout] });
 useBreadcrumbs([
     {
         title: 'Perfil',
-        href: edit().url,
+        href: profileRoutes.edit().url,
     },
 ]);
 
@@ -82,7 +82,7 @@ const user = page.props.auth.user;
                 <p class="-mt-4 text-sm text-muted-foreground">
                     Tu correo aún no está verificado.
                     <Link
-                        :href="send()"
+                        :href="verificationRoutes.send()"
                         as="button"
                         class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
                     >

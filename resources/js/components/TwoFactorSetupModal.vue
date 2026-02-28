@@ -21,7 +21,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { useAppearance } from '@/composables/useAppearance';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
-import { confirm } from '@/routes/two-factor';
+import twoFactorRoutes from '@/routes/two-factor';
 import type { TwoFactorConfigContent } from '@/types';
 
 type Props = {
@@ -238,7 +238,7 @@ watch(
 
                 <template v-else>
                     <Form
-                        v-bind="confirm.form()"
+                        v-bind="twoFactorRoutes.confirm.form()"
                         reset-on-error
                         @finish="code = ''"
                         @success="isOpen = false"

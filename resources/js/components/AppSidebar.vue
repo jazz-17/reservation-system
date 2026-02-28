@@ -23,21 +23,18 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
-import { index as adminAllowList } from '@/routes/admin/allow-list';
-import { index as adminArtifacts } from '@/routes/admin/artifacts';
-import { index as adminAudit } from '@/routes/admin/audit';
-import { index as adminBlackouts } from '@/routes/admin/blackouts';
-import { index as adminFaculties } from '@/routes/admin/faculties';
-import { index as adminHistory } from '@/routes/admin/history';
-import { index as adminRequests } from '@/routes/admin/requests';
-import { index as adminSchools } from '@/routes/admin/schools';
-import { edit as adminSettings } from '@/routes/admin/settings';
-import { index as calendarIndex } from '@/routes/calendar';
-import {
-    index as reservationsIndex,
-    create as reservationsCreate,
-} from '@/routes/reservations';
+import * as appRoutes from '@/routes';
+import adminAllowListRoutes from '@/routes/admin/allow-list';
+import adminArtifactsRoutes from '@/routes/admin/artifacts';
+import adminAuditRoutes from '@/routes/admin/audit';
+import adminBlackoutsRoutes from '@/routes/admin/blackouts';
+import adminFacultiesRoutes from '@/routes/admin/faculties';
+import adminHistoryRoutes from '@/routes/admin/history';
+import adminRequestsRoutes from '@/routes/admin/requests';
+import adminSchoolsRoutes from '@/routes/admin/schools';
+import adminSettingsRoutes from '@/routes/admin/settings';
+import calendarRoutes from '@/routes/calendar';
+import reservationsRoutes from '@/routes/reservations';
 import { type NavItem } from '@/types';
 import AppLogo from './AppLogo.vue';
 
@@ -47,22 +44,22 @@ const isAdmin = computed(() => page.props.auth?.user?.role === 'admin');
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: appRoutes.dashboard(),
         icon: LayoutGrid,
     },
     {
         title: 'Calendario',
-        href: calendarIndex(),
+        href: calendarRoutes.index(),
         icon: CalendarDays,
     },
     {
         title: 'Mis reservas',
-        href: reservationsIndex(),
+        href: reservationsRoutes.index(),
         icon: ListChecks,
     },
     {
         title: 'Nueva solicitud',
-        href: reservationsCreate(),
+        href: reservationsRoutes.create(),
         icon: CalendarDays,
     },
 ];
@@ -70,47 +67,47 @@ const mainNavItems: NavItem[] = [
 const adminNavItems: NavItem[] = [
     {
         title: 'Solicitudes',
-        href: adminRequests(),
+        href: adminRequestsRoutes.index(),
         icon: Shield,
     },
     {
         title: 'Historial',
-        href: adminHistory(),
+        href: adminHistoryRoutes.index(),
         icon: BookOpen,
     },
     {
         title: 'Configuración',
-        href: adminSettings(),
+        href: adminSettingsRoutes.edit(),
         icon: Settings,
     },
     {
         title: 'Facultades',
-        href: adminFaculties(),
+        href: adminFacultiesRoutes.index(),
         icon: Shield,
     },
     {
         title: 'Escuelas',
-        href: adminSchools(),
+        href: adminSchoolsRoutes.index(),
         icon: Shield,
     },
     {
         title: 'Allow-list',
-        href: adminAllowList(),
+        href: adminAllowListRoutes.index(),
         icon: ListChecks,
     },
     {
         title: 'Blackouts',
-        href: adminBlackouts(),
+        href: adminBlackoutsRoutes.index(),
         icon: Ban,
     },
     {
         title: 'Auditoría',
-        href: adminAudit(),
+        href: adminAuditRoutes.index(),
         icon: BookOpen,
     },
     {
         title: 'Reintentos',
-        href: adminArtifacts(),
+        href: adminArtifactsRoutes.index(),
         icon: Shield,
     },
 ];
@@ -122,7 +119,7 @@ const adminNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
+                        <Link :href="appRoutes.dashboard()">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>

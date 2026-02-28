@@ -8,9 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
-import { register } from '@/routes';
-import { store } from '@/routes/login';
-import { request } from '@/routes/password';
+import * as appRoutes from '@/routes';
+import loginRoutes from '@/routes/login';
+import passwordRoutes from '@/routes/password';
 
 defineOptions({ layout: false });
 
@@ -36,7 +36,7 @@ defineProps<{
         </div>
 
         <Form
-            v-bind="store.form()"
+            v-bind="loginRoutes.store.form()"
             :reset-on-success="['password']"
             v-slot="{ errors, processing }"
             class="flex flex-col gap-6"
@@ -62,7 +62,7 @@ defineProps<{
                         <Label for="password">Contraseña</Label>
                         <TextLink
                             v-if="canResetPassword"
-                            :href="request()"
+                            :href="passwordRoutes.request()"
                             class="text-sm"
                             :tabindex="5"
                         >
@@ -105,7 +105,7 @@ defineProps<{
                 v-if="canRegister"
             >
                 ¿No tienes cuenta?
-                <TextLink :href="register()" :tabindex="5"
+                <TextLink :href="appRoutes.register()" :tabindex="5"
                     >Registrarme</TextLink
                 >
             </div>

@@ -7,12 +7,8 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatDateTime } from '@/lib/formatters';
-import {
-    destroy,
-    index as blackoutsIndex,
-    store as storeBlackout,
-} from '@/routes/admin/blackouts';
-import { index as adminRequestsIndex } from '@/routes/admin/requests';
+import adminBlackoutsRoutes from '@/routes/admin/blackouts';
+import adminRequestsRoutes from '@/routes/admin/requests';
 import type { Blackout } from '@/types/admin';
 
 const props = defineProps<{
@@ -20,12 +16,12 @@ const props = defineProps<{
 }>();
 
 useBreadcrumbs([
-    { title: 'Admin', href: adminRequestsIndex().url },
-    { title: 'Blackouts', href: blackoutsIndex().url },
+    { title: 'Admin', href: adminRequestsRoutes.index().url },
+    { title: 'Blackouts', href: adminBlackoutsRoutes.index().url },
 ]);
 
 const remove = (id: number): void => {
-    router.delete(destroy(id).url);
+    router.delete(adminBlackoutsRoutes.destroy(id).url);
 };
 </script>
 
@@ -40,7 +36,7 @@ const remove = (id: number): void => {
 
         <AdminSection title="Crear blackout">
             <Form
-                v-bind="storeBlackout.form()"
+                v-bind="adminBlackoutsRoutes.store.form()"
                 v-slot="{ errors, processing }"
                 class="mt-4 grid gap-3 md:grid-cols-2"
             >

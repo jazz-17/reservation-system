@@ -11,7 +11,7 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { disable, enable, show } from '@/routes/two-factor';
+import twoFactorRoutes from '@/routes/two-factor';
 
 type Props = {
     requiresConfirmation?: boolean;
@@ -28,7 +28,7 @@ defineOptions({ layout: [AppLayout, SettingsLayout] });
 useBreadcrumbs([
     {
         title: 'Autenticación de dos factores',
-        href: show.url(),
+        href: twoFactorRoutes.show.url(),
     },
 ]);
 
@@ -70,7 +70,7 @@ onUnmounted(() => {
                 </Button>
                 <Form
                     v-else
-                    v-bind="enable.form()"
+                    v-bind="twoFactorRoutes.enable.form()"
                     @success="showSetupModal = true"
                     #default="{ processing }"
                 >
@@ -93,7 +93,10 @@ onUnmounted(() => {
             <TwoFactorRecoveryCodes />
 
             <div class="relative inline">
-                <Form v-bind="disable.form()" #default="{ processing }">
+                <Form
+                    v-bind="twoFactorRoutes.disable.form()"
+                    #default="{ processing }"
+                >
                     <Button
                         variant="destructive"
                         type="submit"

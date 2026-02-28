@@ -15,8 +15,8 @@ import {
 } from '@/components/ui/table';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatBaseYear } from '@/lib/formatters';
-import { index as adminRequestsIndex } from '@/routes/admin/requests';
-import { index as schoolsIndex, store, update } from '@/routes/admin/schools';
+import adminRequestsRoutes from '@/routes/admin/requests';
+import adminSchoolsRoutes from '@/routes/admin/schools';
 import type { Faculty, ProfessionalSchool } from '@/types/admin';
 
 const props = defineProps<{
@@ -25,8 +25,8 @@ const props = defineProps<{
 }>();
 
 useBreadcrumbs([
-    { title: 'Admin', href: adminRequestsIndex().url },
-    { title: 'Escuelas', href: schoolsIndex().url },
+    { title: 'Admin', href: adminRequestsRoutes.index().url },
+    { title: 'Escuelas', href: adminSchoolsRoutes.index().url },
 ]);
 </script>
 
@@ -41,7 +41,7 @@ useBreadcrumbs([
 
         <AdminSection title="Nueva escuela">
             <Form
-                v-bind="store.form()"
+                v-bind="adminSchoolsRoutes.store.form()"
                 v-slot="{ errors, processing }"
                 class="mt-4 grid gap-3 md:grid-cols-2"
             >
@@ -159,7 +159,7 @@ useBreadcrumbs([
                 <TableRow v-for="s in props.schools" :key="s.id">
                     <TableCell class="align-top">
                         <Form
-                            v-bind="update.form(s.id)"
+                            v-bind="adminSchoolsRoutes.update.form(s.id)"
                             v-slot="{ errors, processing }"
                             class="grid gap-2 md:grid-cols-[220px_150px_1fr_200px_auto]"
                         >

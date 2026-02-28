@@ -9,14 +9,14 @@ import { Label } from '@/components/ui/label';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { edit } from '@/routes/user-password';
+import userPasswordRoutes from '@/routes/user-password';
 
 defineOptions({ layout: [AppLayout, SettingsLayout] });
 
 useBreadcrumbs([
     {
         title: 'Contraseña',
-        href: edit().url,
+        href: userPasswordRoutes.edit().url,
     },
 ]);
 </script>

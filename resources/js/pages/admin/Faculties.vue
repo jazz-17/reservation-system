@@ -14,12 +14,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
-import {
-    index as facultiesIndex,
-    store,
-    update,
-} from '@/routes/admin/faculties';
-import { index as adminRequestsIndex } from '@/routes/admin/requests';
+import adminFacultiesRoutes from '@/routes/admin/faculties';
+import adminRequestsRoutes from '@/routes/admin/requests';
 import type { Faculty } from '@/types/admin';
 
 const props = defineProps<{
@@ -27,8 +23,8 @@ const props = defineProps<{
 }>();
 
 useBreadcrumbs([
-    { title: 'Admin', href: adminRequestsIndex().url },
-    { title: 'Facultades', href: facultiesIndex().url },
+    { title: 'Admin', href: adminRequestsRoutes.index().url },
+    { title: 'Facultades', href: adminFacultiesRoutes.index().url },
 ]);
 </script>
 
@@ -43,7 +39,7 @@ useBreadcrumbs([
 
         <AdminSection title="Nueva facultad">
             <Form
-                v-bind="store.form()"
+                v-bind="adminFacultiesRoutes.store.form()"
                 v-slot="{ errors, processing }"
                 class="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto]"
             >
@@ -93,7 +89,7 @@ useBreadcrumbs([
                 <TableRow v-for="f in props.faculties" :key="f.id">
                     <TableCell>
                         <Form
-                            v-bind="update.form(f.id)"
+                            v-bind="adminFacultiesRoutes.update.form(f.id)"
                             v-slot="{ errors, processing }"
                             class="flex flex-col gap-1 md:flex-row md:items-center md:gap-2"
                         >

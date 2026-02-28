@@ -13,8 +13,8 @@ import AppCalendar from '@/components/AppCalendar.vue';
 import { Skeleton } from '@/components/ui/skeleton';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { fetchJson } from '@/lib/http';
-import { availability } from '@/routes/api/public';
-import { create as createReservation } from '@/routes/reservations';
+import publicApiRoutes from '@/routes/api/public';
+import reservationsRoutes from '@/routes/reservations';
 
 defineOptions({ layout: AppLayout });
 
@@ -50,7 +50,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     dayMaxEvents: true,
     dateClick: (info) => {
         router.visit(
-            createReservation.url({
+            reservationsRoutes.create.url({
                 query: { date: info.dateStr },
             }),
         );
@@ -65,7 +65,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 
         try {
             const events = await fetchJson<CalendarEvent[]>(
-                availability.url({
+                publicApiRoutes.availability.url({
                     query: { start: info.startStr, end: info.endStr },
                 }),
             );

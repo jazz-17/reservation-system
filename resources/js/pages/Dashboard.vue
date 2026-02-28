@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
-import { dashboard } from '@/routes';
+import * as appRoutes from '@/routes';
 import PlaceholderPattern from '../components/PlaceholderPattern.vue';
 
 useBreadcrumbs([
     {
         title: 'Dashboard',
-        href: dashboard().url,
+        href: appRoutes.dashboard().url,
     },
 ]);
 </script>
