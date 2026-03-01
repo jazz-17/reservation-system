@@ -31,6 +31,7 @@ class User extends Authenticatable
         'base_year',
         'phone',
         'email',
+        'student_code',
         'password',
     ];
 

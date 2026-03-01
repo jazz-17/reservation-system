@@ -87,12 +87,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'permission:admin.pa
     Route::get('allow-list', [AllowListController::class, 'index'])
         ->middleware('permission:admin.gestion.allow_list.view')
         ->name('allow-list.index');
-    Route::post('allow-list/importar', [AllowListController::class, 'import'])
+    Route::get('allow-list/crear', [AllowListController::class, 'create'])
         ->middleware('permission:admin.gestion.allow_list.import')
-        ->name('allow-list.import');
-    Route::get('allow-list/plantilla', [AllowListController::class, 'template'])
-        ->middleware('permission:admin.gestion.allow_list.view')
-        ->name('allow-list.template');
+        ->name('allow-list.create');
+    Route::post('allow-list', [AllowListController::class, 'store'])
+        ->middleware('permission:admin.gestion.allow_list.import')
+        ->name('allow-list.store');
+    Route::put('allow-list/{allow_list_entry}', [AllowListController::class, 'update'])
+        ->middleware('permission:admin.gestion.allow_list.import')
+        ->name('allow-list.update');
+    Route::delete('allow-list/{allow_list_entry}', [AllowListController::class, 'destroy'])
+        ->middleware('permission:admin.gestion.allow_list.import')
+        ->name('allow-list.destroy');
 
     Route::get('blackouts', [BlackoutController::class, 'index'])
         ->middleware('permission:admin.gestion.blackouts.manage')

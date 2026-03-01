@@ -2,6 +2,7 @@
 
 namespace App\Actions\Fortify;
 
+use App\Actions\AllowList\StudentCodeParser;
 use App\Actions\Audit\Audit;
 use App\Concerns\PasswordValidationRules;
 use App\Models\AllowListEntry;
@@ -27,17 +28,9 @@ class CreateNewUser implements CreatesNewUsers
     {
         $normalizedEmail = Str::lower((string) ($input['email'] ?? ''));
 
-        $selectedSchoolId = (int) ($input['professional_school_id'] ?? 0);
-
         $validator = Validator::make($input, [
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
-            'professional_school_id' => [
-                'required',
-                'integer',
-                Rule::exists(ProfessionalSchool::class, 'id')->where('active', true),
-            ],
-            'base_year' => ['required', 'integer', 'min:2000', 'max:2100'],
             'phone' => ['nullable', 'string', 'max:30'],
             'email' => [
                 'required',
@@ -62,51 +55,46 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ]);
 
+        $entry = null;
         $school = null;
-        $validator->after(function ($validator) use ($selectedSchoolId, $input, $normalizedEmail, &$school): void {
-            if ($selectedSchoolId <= 0) {
-                return;
-            }
-
-            $school = ProfessionalSchool::query()
-                ->with(['faculty:id,active'])
-                ->find($selectedSchoolId);
-
-            if ($school === null || ! $school->active || ! $school->faculty?->active) {
-                $validator->errors()->add('professional_school_id', 'La escuela seleccionada no está disponible.');
-
-                return;
-            }
-
-            $baseYear = (int) ($input['base_year'] ?? 0);
-            if ($baseYear < $school->base_year_min || $baseYear > $school->base_year_max) {
-                $validator->errors()->add('base_year', 'La base seleccionada no está disponible para la escuela.');
-            }
-
+        $validator->after(function ($validator) use ($normalizedEmail, &$entry, &$school): void {
             if ($normalizedEmail === '' || ! Str::endsWith($normalizedEmail, '@unmsm.edu.pe')) {
                 return;
             }
 
             $entry = AllowListEntry::query()
                 ->where('email', $normalizedEmail)
-                ->first(['email', 'professional_school_id', 'base_year']);
+                ->first(['email', 'student_code', 'professional_school_id', 'base_year']);
 
             if ($entry === null) {
                 return;
             }
 
-            if ($entry->professional_school_id === null || $entry->base_year === null) {
-                $validator->errors()->add('email', 'Este correo no tiene escuela/base asignada. Contacta al administrador.');
+            if ($entry->professional_school_id === null || $entry->base_year === null || $entry->student_code === null) {
+                $validator->errors()->add('email', 'Este correo no tiene datos completos (código/escuela/base). Contacta al administrador.');
 
                 return;
             }
 
-            if ((int) $entry->professional_school_id !== $selectedSchoolId) {
-                $validator->errors()->add('professional_school_id', 'La escuela seleccionada no coincide con tu registro institucional.');
+            $school = ProfessionalSchool::query()
+                ->with(['faculty:id,active'])
+                ->find((int) $entry->professional_school_id);
+
+            if ($school === null || ! $school->active || ! $school->faculty?->active) {
+                $validator->errors()->add('email', 'La escuela asignada a tu correo no está disponible. Contacta al administrador.');
+
+                return;
             }
 
-            if ((int) $entry->base_year !== $baseYear) {
-                $validator->errors()->add('base_year', 'La base seleccionada no coincide con tu registro institucional.');
+            $derivedBaseYear = StudentCodeParser::baseYear($entry->student_code);
+            if ($derivedBaseYear === null || $derivedBaseYear !== (int) $entry->base_year) {
+                $validator->errors()->add('email', 'Tu registro institucional tiene datos inconsistentes (base/código). Contacta al administrador.');
+
+                return;
+            }
+
+            if ((int) $entry->base_year < $school->base_year_min || (int) $entry->base_year > $school->base_year_max) {
+                $validator->errors()->add('email', 'La base asignada a tu correo no es válida para tu escuela. Contacta al administrador.');
             }
         });
 
@@ -123,14 +111,19 @@ class CreateNewUser implements CreatesNewUsers
             throw $exception;
         }
 
+        if (! $entry instanceof AllowListEntry) {
+            throw ValidationException::withMessages(['email' => 'Este correo no está autorizado para registrarse.']);
+        }
+
         $user = User::create([
             'name' => "{$input['first_name']} {$input['last_name']}",
             'first_name' => $input['first_name'],
             'last_name' => $input['last_name'],
-            'professional_school_id' => $selectedSchoolId,
-            'base_year' => (int) $input['base_year'],
+            'professional_school_id' => $entry->professional_school_id,
+            'base_year' => $entry->base_year,
             'phone' => $input['phone'] ?? null,
             'email' => $normalizedEmail,
+            'student_code' => $entry->student_code,
             'password' => $input['password'],
         ]);
 

@@ -20,17 +20,11 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 
 test('registration is blocked when email is not in allow-list', function () {
-    $email = 'student@example.edu';
-    $school = ProfessionalSchool::factory()->create([
-        'base_year_min' => 2020,
-        'base_year_max' => 2024,
-    ]);
+    $email = 'student.notallowed@unmsm.edu.pe';
 
     $response = $this->post('/register', [
         'first_name' => 'Juan',
         'last_name' => 'Pérez',
-        'professional_school_id' => $school->id,
-        'base_year' => 2022,
         'phone' => '999999999',
         'email' => $email,
         'password' => 'Password123!',
@@ -53,6 +47,7 @@ test('registration succeeds when email is in allow-list', function () {
 
     AllowListEntry::factory()->create([
         'email' => $email,
+        'student_code' => '22000002',
         'professional_school_id' => $school->id,
         'base_year' => 2022,
     ]);
@@ -60,8 +55,6 @@ test('registration succeeds when email is in allow-list', function () {
     $response = $this->post('/register', [
         'first_name' => 'Ana',
         'last_name' => 'García',
-        'professional_school_id' => $school->id,
-        'base_year' => 2022,
         'phone' => '999999999',
         'email' => $email,
         'password' => 'Password123!',

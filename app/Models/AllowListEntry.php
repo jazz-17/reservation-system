@@ -17,6 +17,7 @@ class AllowListEntry extends Model
      */
     protected $fillable = [
         'email',
+        'student_code',
         'professional_school_id',
         'base_year',
         'import_batch_id',

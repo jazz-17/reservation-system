@@ -17,6 +17,7 @@ test('new users can register', function () {
 
     AllowListEntry::factory()->create([
         'email' => 'test@unmsm.edu.pe',
+        'student_code' => '22000001',
         'professional_school_id' => $school->id,
         'base_year' => 2022,
     ]);
@@ -24,8 +25,6 @@ test('new users can register', function () {
     $response = $this->post(route('register.store'), [
         'first_name' => 'Test',
         'last_name' => 'User',
-        'professional_school_id' => $school->id,
-        'base_year' => 2022,
         'phone' => '999999999',
         'email' => 'test@unmsm.edu.pe',
         'password' => 'Password123!',
@@ -37,22 +36,9 @@ test('new users can register', function () {
 });
 
 test('users cannot register with a non-institutional email domain', function () {
-    $school = ProfessionalSchool::factory()->create([
-        'base_year_min' => 2020,
-        'base_year_max' => 2024,
-    ]);
-
-    AllowListEntry::factory()->create([
-        'email' => 'test@example.com',
-        'professional_school_id' => $school->id,
-        'base_year' => 2022,
-    ]);
-
     $this->post(route('register.store'), [
         'first_name' => 'Test',
         'last_name' => 'User',
-        'professional_school_id' => $school->id,
-        'base_year' => 2022,
         'phone' => '999999999',
         'email' => 'test@example.com',
         'password' => 'Password123!',

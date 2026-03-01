@@ -86,6 +86,14 @@ export type ProfessionalSchool = {
     faculty?: { id: number; name: string } | null;
 };
 
+export type AllowListEntry = {
+    id: number;
+    email: string;
+    student_code: string | null;
+    base_year: number | null;
+    professional_school: { id: number; name: string } | null;
+};
+
 export type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 
 export type OpeningHours = Record<DayKey, { open: string; close: string }>;

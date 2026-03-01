@@ -1,5 +1,5 @@
 # Deployment Guide
-157.137.233.117
+
 ## Local Development
 
 ```bash
@@ -14,6 +14,32 @@ composer run dev
 - Mailpit: http://localhost:8025
 
 ## Production (VPS)
+
+### Oracle Cloud — Firewall Setup (one-time)
+
+Oracle Cloud blocks all ports by default at **two independent layers**. Both must be opened or the server will time out even if the app is running.
+
+**1. Cloud Security List** (Oracle Console → Networking → VCN → Security Lists → Default):
+
+Add two Ingress Rules:
+
+| Stateless | Source CIDR | Protocol | Dest. Port | Description |
+|-----------|-------------|----------|------------|-------------|
+| No | 0.0.0.0/0 | TCP | 80 | HTTP |
+| No | 0.0.0.0/0 | TCP | 443 | HTTPS |
+
+**2. OS iptables** (inside the VPS):
+
+```bash
+# Allow HTTP and HTTPS before the default REJECT rule
+sudo iptables -I INPUT 5 -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 6 -p tcp --dport 443 -j ACCEPT
+
+# Persist rules across reboots
+sudo netfilter-persistent save
+```
+
+---
 
 ### First-time Setup
 
@@ -64,6 +90,9 @@ cd reservation-system
 git pull
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 docker compose --env-file .env.production -f docker-compose.prod.yml exec app php artisan migrate --force
+
+# Reload PHP-FPM to clear OPcache after a rebuild (bytecode is cached from build time)
+docker compose --env-file .env.production -f docker-compose.prod.yml exec app kill -USR2 1
 ```
 
 ### Useful Commands

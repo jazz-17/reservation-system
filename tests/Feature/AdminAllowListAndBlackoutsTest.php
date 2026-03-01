@@ -1,6 +1,5 @@
 <?php
 
-use App\Actions\AllowList\AllowListImportService;
 use App\Models\AllowListEntry;
 use App\Models\AuditEvent;
 use App\Models\Blackout;
@@ -8,11 +7,7 @@ use App\Models\Faculty;
 use App\Models\ProfessionalSchool;
 use App\Models\User;
 use Carbon\CarbonImmutable;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
-use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Facades\Excel;
 
 test('allow-list page renders', function () {
     $admin = User::factory()->admin()->create();
@@ -23,10 +18,11 @@ test('allow-list page renders', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/AllowList')
             ->has('count')
+            ->has('schools')
         );
 });
 
-test('allow-list import supports merge mode (csv) with report + audit', function () {
+test('admins can store an allow-list entry (code + derived base)', function () {
     $admin = User::factory()->admin()->create();
 
     $faculty = Faculty::factory()->create(['active' => true]);
@@ -34,40 +30,27 @@ test('allow-list import supports merge mode (csv) with report + audit', function
         'faculty_id' => $faculty->id,
         'code' => 'ep_sistemas',
         'active' => true,
+        'base_year_min' => 2020,
+        'base_year_max' => 2024,
     ]);
 
-    AllowListEntry::factory()->create([
-        'email' => 'existing@unmsm.edu.pe',
-        'professional_school_id' => $school->id,
-        'base_year' => 2022,
-    ]);
+    $this->actingAs($admin)
+        ->post(route('admin.allow-list.store'), [
+            'email' => 'new@unmsm.edu.pe',
+            'professional_school_id' => $school->id,
+            'student_code' => '22000001',
+        ])
+        ->assertRedirect();
 
-    $csv = implode("\n", [
-        'existing@unmsm.edu.pe,ep_sistemas,B22',
-        'new@unmsm.edu.pe,ep_sistemas,B22',
-        'new@unmsm.edu.pe,ep_sistemas,B22',
-        'not-an-email,ep_sistemas,B22',
-    ]);
+    $entry = AllowListEntry::query()->where('email', 'new@unmsm.edu.pe')->firstOrFail();
+    expect($entry->student_code)->toBe('22000001');
+    expect((int) $entry->base_year)->toBe(2022);
+    expect((int) $entry->professional_school_id)->toBe((int) $school->id);
 
-    $path = tempnam(sys_get_temp_dir(), 'allow-list-');
-    file_put_contents($path, $csv);
-
-    $file = new UploadedFile($path, 'emails.csv', 'text/csv', null, true);
-
-    $report = app(AllowListImportService::class)->import($admin, $file, 'merge');
-
-    expect($report['imported'])->toBe(2);
-    expect($report['duplicates'])->toBe(1);
-    expect($report['invalid'])->toBe(1);
-
-    expect(AllowListEntry::query()->count())->toBe(2);
-    expect(AllowListEntry::query()->where('email', 'existing@unmsm.edu.pe')->exists())->toBeTrue();
-    expect(AllowListEntry::query()->where('email', 'new@unmsm.edu.pe')->exists())->toBeTrue();
-
-    expect(AuditEvent::query()->where('event_type', 'allow_list.imported')->exists())->toBeTrue();
+    expect(AuditEvent::query()->where('event_type', 'allow_list.entry_saved')->exists())->toBeTrue();
 });
 
-test('allow-list import supports replace mode (csv)', function () {
+test('store rejects an allow-list entry when derived base is out of school range', function () {
     $admin = User::factory()->admin()->create();
 
     $faculty = Faculty::factory()->create(['active' => true]);
@@ -75,78 +58,169 @@ test('allow-list import supports replace mode (csv)', function () {
         'faculty_id' => $faculty->id,
         'code' => 'ep_sistemas',
         'active' => true,
+        'base_year_min' => 2020,
+        'base_year_max' => 2021,
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.allow-list.store'), [
+            'email' => 'bad@unmsm.edu.pe',
+            'professional_school_id' => $school->id,
+            'student_code' => '22000001',
+        ])
+        ->assertSessionHasErrors('student_code');
+});
+
+test('artisan padron import populates allow-list entries (replace mode) and audits', function () {
+    $admin = User::factory()->admin()->create([
+        'email' => 'admin@unmsm.edu.pe',
+    ]);
+
+    $faculty = Faculty::factory()->create(['active' => true]);
+
+    $systems = ProfessionalSchool::factory()->create([
+        'faculty_id' => $faculty->id,
+        'code' => 'ep_sistemas',
+        'active' => true,
+        'base_year_min' => 2020,
+        'base_year_max' => 2024,
+    ]);
+
+    $software = ProfessionalSchool::factory()->create([
+        'faculty_id' => $faculty->id,
+        'code' => 'ep_software',
+        'active' => true,
+        'base_year_min' => 2020,
+        'base_year_max' => 2024,
     ]);
 
     AllowListEntry::factory()->create([
         'email' => 'old@unmsm.edu.pe',
+        'student_code' => '20000000',
+        'professional_school_id' => $systems->id,
+        'base_year' => 2020,
+    ]);
+
+    $csv = implode("\n", [
+        'codigo,base,correo,programa',
+        '22000011,22,one@unmsm.edu.pe,E.P. de Ingeniería de Sistemas',
+        '23000012,23,two@unmsm.edu.pe,E.P. de Ingeniería de Software',
+        '',
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'padron-');
+    file_put_contents($path, $csv);
+
+    $this->artisan('allow-list:import-padron', [
+        'path' => $path,
+        '--mode' => 'replace',
+        '--admin-email' => 'admin@unmsm.edu.pe',
+    ])->assertExitCode(0);
+
+    expect(AllowListEntry::query()->count())->toBe(2);
+    expect(AllowListEntry::query()->where('email', 'old@unmsm.edu.pe')->exists())->toBeFalse();
+
+    $one = AllowListEntry::query()->where('email', 'one@unmsm.edu.pe')->firstOrFail();
+    expect($one->student_code)->toBe('22000011');
+    expect((int) $one->base_year)->toBe(2022);
+    expect((int) $one->professional_school_id)->toBe((int) $systems->id);
+    expect((int) $one->imported_by)->toBe((int) $admin->id);
+
+    $two = AllowListEntry::query()->where('email', 'two@unmsm.edu.pe')->firstOrFail();
+    expect($two->student_code)->toBe('23000012');
+    expect((int) $two->base_year)->toBe(2023);
+    expect((int) $two->professional_school_id)->toBe((int) $software->id);
+    expect((int) $two->imported_by)->toBe((int) $admin->id);
+
+    expect(AuditEvent::query()->where('event_type', 'allow_list.imported')->where('actor_id', $admin->id)->exists())->toBeTrue();
+});
+
+test('allow-list index returns paginated entries with search', function () {
+    $admin = User::factory()->admin()->create();
+
+    $faculty = Faculty::factory()->create(['active' => true]);
+    $school = ProfessionalSchool::factory()->create([
+        'faculty_id' => $faculty->id,
+        'active' => true,
+        'base_year_min' => 2020,
+        'base_year_max' => 2025,
+    ]);
+
+    AllowListEntry::factory()->count(3)->create([
         'professional_school_id' => $school->id,
         'base_year' => 2022,
     ]);
     AllowListEntry::factory()->create([
-        'email' => 'old2@unmsm.edu.pe',
+        'email' => 'searchme@unmsm.edu.pe',
         'professional_school_id' => $school->id,
         'base_year' => 2022,
     ]);
 
-    $path = tempnam(sys_get_temp_dir(), 'allow-list-');
-    file_put_contents($path, "only@unmsm.edu.pe,ep_sistemas,B22\n");
+    $this->actingAs($admin)
+        ->get(route('admin.allow-list.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/AllowList')
+            ->has('entries.data', 4)
+            ->has('filters')
+        );
 
-    $file = new UploadedFile($path, 'emails.csv', 'text/csv', null, true);
-
-    app(AllowListImportService::class)->import($admin, $file, 'replace');
-
-    expect(AllowListEntry::query()->count())->toBe(1);
-    expect(AllowListEntry::query()->where('email', 'only@unmsm.edu.pe')->exists())->toBeTrue();
+    $this->actingAs($admin)
+        ->get(route('admin.allow-list.index', ['search' => 'searchme']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/AllowList')
+            ->has('entries.data', 1)
+        );
 });
 
-test('allow-list import supports xlsx uploads', function () {
+test('admins can update an allow-list entry', function () {
     $admin = User::factory()->admin()->create();
 
     $faculty = Faculty::factory()->create(['active' => true]);
-    ProfessionalSchool::factory()->create([
+    $school = ProfessionalSchool::factory()->create([
         'faculty_id' => $faculty->id,
-        'code' => 'ep_sistemas',
         'active' => true,
+        'base_year_min' => 2020,
+        'base_year_max' => 2025,
     ]);
 
-    Storage::disk('local')->makeDirectory('tmp-tests');
+    $entry = AllowListEntry::factory()->create([
+        'email' => 'original@unmsm.edu.pe',
+        'student_code' => '22000001',
+        'professional_school_id' => $school->id,
+        'base_year' => 2022,
+    ]);
 
-    $export = new class implements FromArray
-    {
-        public function array(): array
-        {
-            return [
-                ['one@unmsm.edu.pe', 'ep_sistemas', 'B22'],
-                ['two@unmsm.edu.pe', 'ep_sistemas', 'B22'],
-            ];
-        }
-    };
+    $this->actingAs($admin)
+        ->put(route('admin.allow-list.update', $entry), [
+            'email' => 'updated@unmsm.edu.pe',
+            'professional_school_id' => $school->id,
+            'student_code' => '23000002',
+        ])
+        ->assertRedirect();
 
-    Excel::store($export, 'tmp-tests/allow.xlsx', 'local');
+    $entry->refresh();
+    expect($entry->email)->toBe('updated@unmsm.edu.pe');
+    expect($entry->student_code)->toBe('23000002');
+    expect((int) $entry->base_year)->toBe(2023);
 
-    $xlsxPath = Storage::disk('local')->path('tmp-tests/allow.xlsx');
-    $file = new UploadedFile(
-        $xlsxPath,
-        'allow.xlsx',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        null,
-        true,
-    );
-
-    $report = app(AllowListImportService::class)->import($admin, $file, 'replace');
-
-    expect($report['imported'])->toBe(2);
-    expect(AllowListEntry::query()->count())->toBe(2);
+    expect(AuditEvent::query()->where('event_type', 'allow_list.entry_updated')->exists())->toBeTrue();
 });
 
-test('admins can download allow-list csv template', function () {
+test('admins can delete an allow-list entry', function () {
     $admin = User::factory()->admin()->create();
 
-    $response = $this->actingAs($admin)->get(route('admin.allow-list.template'));
+    $entry = AllowListEntry::factory()->create([
+        'email' => 'todelete@unmsm.edu.pe',
+    ]);
 
-    $response->assertOk();
-    $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
-    $response->assertSee('email,school_code,base');
+    $this->actingAs($admin)
+        ->delete(route('admin.allow-list.destroy', $entry))
+        ->assertRedirect();
+
+    expect(AllowListEntry::query()->where('email', 'todelete@unmsm.edu.pe')->exists())->toBeFalse();
+    expect(AuditEvent::query()->where('event_type', 'allow_list.entry_deleted')->exists())->toBeTrue();
 });
 
 test('admins can create and delete blackouts (audited)', function () {

@@ -19,11 +19,15 @@ class AllowListEntryFactory extends Factory
     {
         $min = 2018;
         $max = max($min, (int) now()->year);
+        $year = fake()->numberBetween($min, $max);
+        $yy = str_pad((string) ($year % 100), 2, '0', STR_PAD_LEFT);
+        $studentCode = $yy.fake()->numerify('######');
 
         return [
             'email' => fake()->unique()->safeEmail(),
             'professional_school_id' => ProfessionalSchool::factory(),
-            'base_year' => fake()->numberBetween($min, $max),
+            'student_code' => $studentCode,
+            'base_year' => $year,
         ];
     }
 }
