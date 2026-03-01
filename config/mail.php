@@ -37,6 +37,10 @@ return [
 
     'mailers' => [
 
+        'smtp2go' => [
+            'transport' => 'smtp2go',
+        ],
+
         'smtp' => [
             'transport' => 'smtp',
             'scheme' => env('MAIL_SCHEME'),
