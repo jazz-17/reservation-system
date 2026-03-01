@@ -18,6 +18,19 @@ test('allow-list page renders', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/AllowList')
             ->has('count')
+            ->has('entries')
+            ->has('schools')
+        );
+});
+
+test('allow-list create page renders', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->get(route('admin.allow-list.create'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/AllowListCreate')
             ->has('schools')
         );
 });

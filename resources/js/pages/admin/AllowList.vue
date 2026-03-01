@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Form, Head, router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Form, Head, Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import AdminSection from '@/components/admin/AdminSection.vue';
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
@@ -52,42 +52,7 @@ useBreadcrumbs([
     { title: 'Allow-list', href: adminAllowListRoutes.index().url },
 ]);
 
-const selectedSchoolId = ref<string>('');
-const studentCode = ref<string>('');
 const search = ref(props.filters.search);
-
-const selectedSchool = computed(() => {
-    const id = Number(selectedSchoolId.value);
-    if (!Number.isFinite(id) || id <= 0) {
-        return null;
-    }
-
-    return props.schools.find((s) => s.id === id) ?? null;
-});
-
-const derivedBaseYear = computed<number | null>(() => {
-    const normalized = studentCode.value.trim().replaceAll(' ', '');
-    if (!/^\d{2,32}$/.test(normalized)) {
-        return null;
-    }
-
-    const yy = Number(normalized.slice(0, 2));
-    if (!Number.isFinite(yy)) {
-        return null;
-    }
-
-    const year = 2000 + yy;
-    return year >= 2000 && year <= 2100 ? year : null;
-});
-
-const derivedBaseLabel = computed(() => {
-    if (derivedBaseYear.value === null) {
-        return '—';
-    }
-
-    const yy = String(derivedBaseYear.value % 100).padStart(2, '0');
-    return `B${yy} (${derivedBaseYear.value})`;
-});
 
 const submitSearch = (): void => {
     router.get(
@@ -109,78 +74,13 @@ const remove = (id: number): void => {
         <AdminPageHeader
             title="Allow-list"
             :subtitle="`Correos permitidos para registrarse. Total: ${props.count}`"
-        />
-
-        <AdminSection title="Agregar correo">
-            <p class="mt-1 text-sm text-muted-foreground">
-                El alumno se registra solo con su correo institucional. La
-                escuela y la base se asignan desde esta allow-list.
-            </p>
-
-            <Form
-                v-bind="adminAllowListRoutes.store.form()"
-                v-slot="{ errors, processing }"
-                class="mt-4 grid gap-3"
-            >
-                <div class="grid gap-1">
-                    <Label for="email">Correo institucional</Label>
-                    <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        required
-                        placeholder="usuario@unmsm.edu.pe"
-                    />
-                    <InputError :message="errors.email" />
-                </div>
-
-                <div class="grid gap-1">
-                    <Label for="professional_school_id">Escuela profesional</Label>
-                    <NativeSelect
-                        id="professional_school_id"
-                        v-model="selectedSchoolId"
-                        name="professional_school_id"
-                        required
-                    >
-                        <option value="" disabled>Selecciona una escuela</option>
-                        <option
-                            v-for="s in props.schools"
-                            :key="s.id"
-                            :value="String(s.id)"
-                        >
-                            {{ s.name }}
-                        </option>
-                    </NativeSelect>
-                    <InputError :message="errors.professional_school_id" />
-                </div>
-
-                <div class="grid gap-1">
-                    <Label for="student_code">Código</Label>
-                    <Input
-                        id="student_code"
-                        v-model="studentCode"
-                        name="student_code"
-                        type="text"
-                        required
-                        inputmode="numeric"
-                        placeholder="20200111"
-                    />
-                    <InputError :message="errors.student_code" />
-                    <div class="text-xs text-muted-foreground">
-                        Base derivada: {{ derivedBaseLabel }}
-                        <span v-if="selectedSchool" class="ml-1">
-                            (Rango permitido: {{ selectedSchool.base_year_min }}–{{ selectedSchool.base_year_max }})
-                        </span>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-end">
-                    <Button type="submit" :disabled="processing">
-                        Guardar
-                    </Button>
-                </div>
-            </Form>
-        </AdminSection>
+        >
+            <Button as-child>
+                <Link :href="adminAllowListRoutes.create().url">
+                    Agregar correo
+                </Link>
+            </Button>
+        </AdminPageHeader>
 
         <AdminSection title="Entradas">
             <form class="mt-3 flex gap-2" @submit.prevent="submitSearch">
