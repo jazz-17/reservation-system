@@ -123,7 +123,7 @@ class CreateNewUser implements CreatesNewUsers
             throw $exception;
         }
 
-        return User::create([
+        $user = User::create([
             'name' => "{$input['first_name']} {$input['last_name']}",
             'first_name' => $input['first_name'],
             'last_name' => $input['last_name'],
@@ -133,5 +133,9 @@ class CreateNewUser implements CreatesNewUsers
             'email' => $normalizedEmail,
             'password' => $input['password'],
         ]);
+
+        $user->assignRole('student');
+
+        return $user;
     }
 }

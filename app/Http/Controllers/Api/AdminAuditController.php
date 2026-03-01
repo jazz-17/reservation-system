@@ -13,7 +13,7 @@ class AdminAuditController extends Controller
 {
     public function __invoke(Request $request, SettingsService $settings): JsonResponse
     {
-        if (! $request->user()?->isAdmin()) {
+        if (! $request->user()?->can('admin.supervision.auditoria.view')) {
             abort(403);
         }
 

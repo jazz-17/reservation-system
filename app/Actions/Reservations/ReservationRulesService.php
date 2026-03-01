@@ -70,7 +70,7 @@ class ReservationRulesService
             ]);
         }
 
-        if ($actor->id !== $reservation->user_id && ! $actor->isAdmin()) {
+        if ($actor->id !== $reservation->user_id && ! $actor->can('reservations.cancel.any')) {
             throw ValidationException::withMessages([
                 'reservation' => 'No tienes permisos para cancelar esta reserva.',
             ]);

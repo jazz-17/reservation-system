@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Enums\UserRole;
 use App\Models\Faculty;
 use App\Models\ProfessionalSchool;
 use App\Models\User;
@@ -36,40 +35,25 @@ class DatabaseSeeder extends Seeder
             ['code' => 'ep_software', 'active' => true, 'base_year_min' => $schoolMin, 'base_year_max' => $schoolMax],
         );
 
-        $defaultPassword = Hash::make('password');
+        $this->call(RolesAndPermissionsSeeder::class);
 
-        User::query()->updateOrCreate(
-            ['email' => 'admin@example.com'],
+        $adminEmail = (string) config('seed.admin.email');
+        $adminPassword = (string) config('seed.admin.password');
+        $adminFirstName = (string) config('seed.admin.first_name');
+        $adminLastName = (string) config('seed.admin.last_name');
+
+        $admin = User::query()->updateOrCreate(
+            ['email' => $adminEmail],
             [
-                'name' => 'Admin',
-                'first_name' => 'Admin',
-                'last_name' => 'User',
-                'role' => UserRole::Admin,
+                'name' => "{$adminFirstName} {$adminLastName}",
+                'first_name' => $adminFirstName,
+                'last_name' => $adminLastName,
                 'professional_school_id' => null,
                 'base_year' => null,
-                'password' => $defaultPassword,
+                'password' => Hash::make($adminPassword),
             ],
         );
 
-        $students = [
-            ['email' => 'test@example.com', 'first_name' => 'Test', 'last_name' => 'User'],
-            ['email' => 'estudiante@example.com', 'first_name' => 'Estudiante', 'last_name' => 'Uno'],
-            ['email' => 'estudiante2@example.com', 'first_name' => 'Estudiante', 'last_name' => 'Dos'],
-        ];
-
-        foreach ($students as $student) {
-            User::query()->updateOrCreate(
-                ['email' => $student['email']],
-                [
-                    'name' => "{$student['first_name']} {$student['last_name']}",
-                    'first_name' => $student['first_name'],
-                    'last_name' => $student['last_name'],
-                    'role' => UserRole::Student,
-                    'professional_school_id' => $systemsSchool->id,
-                    'base_year' => 2022,
-                    'password' => $defaultPassword,
-                ],
-            );
-        }
+        $admin->syncRoles(['admin']);
     }
 }

@@ -17,7 +17,7 @@ class AdminHistoryController extends Controller
      */
     public function __invoke(Request $request, SettingsService $settings): JsonResponse
     {
-        if (! $request->user()?->isAdmin()) {
+        if (! $request->user()?->can('admin.reservas.historial.view')) {
             abort(403);
         }
 

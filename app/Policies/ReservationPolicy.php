@@ -9,11 +9,11 @@ class ReservationPolicy
 {
     public function cancel(User $user, Reservation $reservation): bool
     {
-        return $user->isAdmin() || $user->id === $reservation->user_id;
+        return $user->id === $reservation->user_id || $user->can('reservations.cancel.any');
     }
 
     public function viewPdf(User $user, Reservation $reservation): bool
     {
-        return $user->isAdmin() || $user->id === $reservation->user_id;
+        return $user->id === $reservation->user_id || $user->can('reservations.view_pdf.any');
     }
 }

@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Actions\Audit\Audit;
-use App\Models\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
@@ -39,17 +38,20 @@ class MakeAdmin extends Command
             return self::FAILURE;
         }
 
-        if ($user->role === UserRole::Admin) {
+        if ($user->hasRole('admin')) {
             $this->info("User is already admin: {$email}");
 
             return self::SUCCESS;
         }
 
-        $user->forceFill(['role' => UserRole::Admin])->save();
+        $previousRoles = $user->getRoleNames()->all();
+
+        $user->syncRoles(['admin']);
 
         Audit::record('user.role_promoted', actor: null, subject: $user, metadata: [
             'email' => $email,
             'role' => 'admin',
+            'previous_roles' => $previousRoles,
         ]);
 
         $this->info("Promoted to admin: {$email}");

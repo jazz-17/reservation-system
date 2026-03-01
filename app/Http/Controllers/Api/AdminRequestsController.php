@@ -15,7 +15,7 @@ class AdminRequestsController extends Controller
      */
     public function __invoke(Request $request): JsonResponse
     {
-        if (! $request->user()?->isAdmin()) {
+        if (! $request->user()?->can('admin.reservas.solicitudes.view')) {
             abort(403);
         }
 

@@ -12,7 +12,7 @@ class UpdateSettingsRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->isAdmin() ?? false;
+        return $this->user()?->can('admin.gestion.configuracion.manage') ?? false;
     }
 
     /**

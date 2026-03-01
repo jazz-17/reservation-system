@@ -3,18 +3,20 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use App\Models\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
+
+    use HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -28,7 +30,6 @@ class User extends Authenticatable
         'professional_school_id',
         'base_year',
         'phone',
-        'role',
         'email',
         'password',
     ];
@@ -56,7 +57,6 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
-            'role' => UserRole::class,
             'base_year' => 'integer',
         ];
     }
@@ -80,10 +80,5 @@ class User extends Authenticatable
         $yy = str_pad((string) ($this->base_year % 100), 2, '0', STR_PAD_LEFT);
 
         return "B{$yy}";
-    }
-
-    public function isAdmin(): bool
-    {
-        return $this->role === UserRole::Admin;
     }
 }

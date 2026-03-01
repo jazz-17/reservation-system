@@ -39,7 +39,110 @@ import { type NavItem } from '@/types';
 import AppLogo from './AppLogo.vue';
 
 const page = usePage();
-const isAdmin = computed(() => page.props.auth?.user?.role === 'admin');
+
+const permissions = computed(() => {
+    const user = page.props.auth?.user;
+    if (!user) {
+        return [];
+    }
+
+    return Array.isArray(user.permissions) ? user.permissions : [];
+});
+
+const hasPermission = (permission: string) =>
+    permissions.value.includes(permission);
+
+const navItemsFor = (items: Array<{ permission: string; item: NavItem }>) =>
+    items.filter(({ permission }) => hasPermission(permission)).map(({ item }) => item);
+
+const reservasNavItems = computed<NavItem[]>(() =>
+    navItemsFor([
+        {
+            permission: 'admin.reservas.solicitudes.view',
+            item: {
+                title: 'Solicitudes',
+                href: adminRequestsRoutes.index(),
+                icon: Shield,
+            },
+        },
+        {
+            permission: 'admin.reservas.historial.view',
+            item: {
+                title: 'Historial',
+                href: adminHistoryRoutes.index(),
+                icon: BookOpen,
+            },
+        },
+        {
+            permission: 'admin.reservas.reintentos.view',
+            item: {
+                title: 'Reintentos',
+                href: adminArtifactsRoutes.index(),
+                icon: Shield,
+            },
+        },
+    ]),
+);
+
+const gestionNavItems = computed<NavItem[]>(() =>
+    navItemsFor([
+        {
+            permission: 'admin.gestion.configuracion.manage',
+            item: {
+                title: 'Configuración',
+                href: adminSettingsRoutes.edit(),
+                icon: Settings,
+            },
+        },
+        {
+            permission: 'admin.gestion.facultades.manage',
+            item: {
+                title: 'Facultades',
+                href: adminFacultiesRoutes.index(),
+                icon: Shield,
+            },
+        },
+        {
+            permission: 'admin.gestion.escuelas.manage',
+            item: {
+                title: 'Escuelas',
+                href: adminSchoolsRoutes.index(),
+                icon: Shield,
+            },
+        },
+        {
+            permission: 'admin.gestion.allow_list.view',
+            item: {
+                title: 'Allow-list',
+                href: adminAllowListRoutes.index(),
+                icon: ListChecks,
+            },
+        },
+        {
+            permission: 'admin.gestion.blackouts.manage',
+            item: {
+                title: 'Blackouts',
+                href: adminBlackoutsRoutes.index(),
+                icon: Ban,
+            },
+        },
+    ]),
+);
+
+const supervisionNavItems = computed<NavItem[]>(() =>
+    navItemsFor([
+        {
+            permission: 'admin.supervision.auditoria.view',
+            item: {
+                title: 'Auditoría',
+                href: adminAuditRoutes.index(),
+                icon: BookOpen,
+            },
+        },
+    ]),
+);
+
+const canAccessAdmin = computed(() => hasPermission('admin.panel.access'));
 
 const mainNavItems: NavItem[] = [
     {
@@ -63,54 +166,6 @@ const mainNavItems: NavItem[] = [
         icon: CalendarDays,
     },
 ];
-
-const adminNavItems: NavItem[] = [
-    {
-        title: 'Solicitudes',
-        href: adminRequestsRoutes.index(),
-        icon: Shield,
-    },
-    {
-        title: 'Historial',
-        href: adminHistoryRoutes.index(),
-        icon: BookOpen,
-    },
-    {
-        title: 'Configuración',
-        href: adminSettingsRoutes.edit(),
-        icon: Settings,
-    },
-    {
-        title: 'Facultades',
-        href: adminFacultiesRoutes.index(),
-        icon: Shield,
-    },
-    {
-        title: 'Escuelas',
-        href: adminSchoolsRoutes.index(),
-        icon: Shield,
-    },
-    {
-        title: 'Allow-list',
-        href: adminAllowListRoutes.index(),
-        icon: ListChecks,
-    },
-    {
-        title: 'Blackouts',
-        href: adminBlackoutsRoutes.index(),
-        icon: Ban,
-    },
-    {
-        title: 'Auditoría',
-        href: adminAuditRoutes.index(),
-        icon: BookOpen,
-    },
-    {
-        title: 'Reintentos',
-        href: adminArtifactsRoutes.index(),
-        icon: Shield,
-    },
-];
 </script>
 
 <template>
@@ -130,9 +185,19 @@ const adminNavItems: NavItem[] = [
         <SidebarContent>
             <NavMain :items="mainNavItems" />
             <NavMain
-                v-if="isAdmin"
-                :items="adminNavItems"
-                label="Administración"
+                v-if="canAccessAdmin && reservasNavItems.length > 0"
+                :items="reservasNavItems"
+                label="Reservas"
+            />
+            <NavMain
+                v-if="canAccessAdmin && gestionNavItems.length > 0"
+                :items="gestionNavItems"
+                label="Gestión"
+            />
+            <NavMain
+                v-if="canAccessAdmin && supervisionNavItems.length > 0"
+                :items="supervisionNavItems"
+                label="Supervisión"
             />
         </SidebarContent>
 

@@ -13,7 +13,7 @@ class StoreFacultyRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->isAdmin() ?? false;
+        return $this->user()?->can('admin.gestion.facultades.manage') ?? false;
     }
 
     /**

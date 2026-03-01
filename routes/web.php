@@ -42,35 +42,78 @@ Route::middleware(['auth'])->group(function () {
         ->name('reservations.cancel');
 });
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
-    Route::get('solicitudes', [ReservationRequestController::class, 'index'])->name('requests.index');
-    Route::post('solicitudes/{reservation}/aprobar', [ReservationRequestController::class, 'approve'])->name('requests.approve');
-    Route::post('solicitudes/{reservation}/rechazar', [ReservationRequestController::class, 'reject'])->name('requests.reject');
-    Route::get('historial', [ReservationHistoryController::class, 'index'])->name('history.index');
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'permission:admin.panel.access'])->group(function () {
+    Route::get('solicitudes', [ReservationRequestController::class, 'index'])
+        ->middleware('permission:admin.reservas.solicitudes.view')
+        ->name('requests.index');
+    Route::post('solicitudes/{reservation}/aprobar', [ReservationRequestController::class, 'approve'])
+        ->middleware('permission:admin.reservas.solicitudes.decide')
+        ->name('requests.approve');
+    Route::post('solicitudes/{reservation}/rechazar', [ReservationRequestController::class, 'reject'])
+        ->middleware('permission:admin.reservas.solicitudes.decide')
+        ->name('requests.reject');
 
-    Route::get('configuracion', [SettingsController::class, 'edit'])->name('settings.edit');
-    Route::put('configuracion', [SettingsController::class, 'update'])->name('settings.update');
+    Route::get('historial', [ReservationHistoryController::class, 'index'])
+        ->middleware('permission:admin.reservas.historial.view')
+        ->name('history.index');
 
-    Route::get('facultades', [FacultyController::class, 'index'])->name('faculties.index');
-    Route::post('facultades', [FacultyController::class, 'store'])->name('faculties.store');
-    Route::put('facultades/{faculty}', [FacultyController::class, 'update'])->name('faculties.update');
+    Route::get('configuracion', [SettingsController::class, 'edit'])
+        ->middleware('permission:admin.gestion.configuracion.manage')
+        ->name('settings.edit');
+    Route::put('configuracion', [SettingsController::class, 'update'])
+        ->middleware('permission:admin.gestion.configuracion.manage')
+        ->name('settings.update');
 
-    Route::get('escuelas', [ProfessionalSchoolController::class, 'index'])->name('schools.index');
-    Route::post('escuelas', [ProfessionalSchoolController::class, 'store'])->name('schools.store');
-    Route::put('escuelas/{professionalSchool}', [ProfessionalSchoolController::class, 'update'])->name('schools.update');
+    Route::get('facultades', [FacultyController::class, 'index'])
+        ->middleware('permission:admin.gestion.facultades.manage')
+        ->name('faculties.index');
+    Route::post('facultades', [FacultyController::class, 'store'])
+        ->middleware('permission:admin.gestion.facultades.manage')
+        ->name('faculties.store');
+    Route::put('facultades/{faculty}', [FacultyController::class, 'update'])
+        ->middleware('permission:admin.gestion.facultades.manage')
+        ->name('faculties.update');
 
-    Route::get('allow-list', [AllowListController::class, 'index'])->name('allow-list.index');
-    Route::post('allow-list/importar', [AllowListController::class, 'import'])->name('allow-list.import');
-    Route::get('allow-list/plantilla', [AllowListController::class, 'template'])->name('allow-list.template');
+    Route::get('escuelas', [ProfessionalSchoolController::class, 'index'])
+        ->middleware('permission:admin.gestion.escuelas.manage')
+        ->name('schools.index');
+    Route::post('escuelas', [ProfessionalSchoolController::class, 'store'])
+        ->middleware('permission:admin.gestion.escuelas.manage')
+        ->name('schools.store');
+    Route::put('escuelas/{professionalSchool}', [ProfessionalSchoolController::class, 'update'])
+        ->middleware('permission:admin.gestion.escuelas.manage')
+        ->name('schools.update');
 
-    Route::get('blackouts', [BlackoutController::class, 'index'])->name('blackouts.index');
-    Route::post('blackouts', [BlackoutController::class, 'store'])->name('blackouts.store');
-    Route::delete('blackouts/{blackout}', [BlackoutController::class, 'destroy'])->name('blackouts.destroy');
+    Route::get('allow-list', [AllowListController::class, 'index'])
+        ->middleware('permission:admin.gestion.allow_list.view')
+        ->name('allow-list.index');
+    Route::post('allow-list/importar', [AllowListController::class, 'import'])
+        ->middleware('permission:admin.gestion.allow_list.import')
+        ->name('allow-list.import');
+    Route::get('allow-list/plantilla', [AllowListController::class, 'template'])
+        ->middleware('permission:admin.gestion.allow_list.view')
+        ->name('allow-list.template');
 
-    Route::get('auditoria', [AuditController::class, 'index'])->name('audit.index');
+    Route::get('blackouts', [BlackoutController::class, 'index'])
+        ->middleware('permission:admin.gestion.blackouts.manage')
+        ->name('blackouts.index');
+    Route::post('blackouts', [BlackoutController::class, 'store'])
+        ->middleware('permission:admin.gestion.blackouts.manage')
+        ->name('blackouts.store');
+    Route::delete('blackouts/{blackout}', [BlackoutController::class, 'destroy'])
+        ->middleware('permission:admin.gestion.blackouts.manage')
+        ->name('blackouts.destroy');
 
-    Route::get('artifacts', [ReservationArtifactController::class, 'index'])->name('artifacts.index');
-    Route::post('artifacts/{artifact}/retry', [ReservationArtifactController::class, 'retry'])->name('artifacts.retry');
+    Route::get('auditoria', [AuditController::class, 'index'])
+        ->middleware('permission:admin.supervision.auditoria.view')
+        ->name('audit.index');
+
+    Route::get('artifacts', [ReservationArtifactController::class, 'index'])
+        ->middleware('permission:admin.reservas.reintentos.view')
+        ->name('artifacts.index');
+    Route::post('artifacts/{artifact}/retry', [ReservationArtifactController::class, 'retry'])
+        ->middleware('permission:admin.reservas.reintentos.retry')
+        ->name('artifacts.retry');
 });
 
 Route::prefix('api')->name('api.')->group(function () {
@@ -80,10 +123,16 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::get('student/reservations', StudentReservationsController::class)->name('student.reservations');
     });
 
-    Route::middleware(['auth', 'admin'])->group(function () {
-        Route::get('admin/requests', AdminRequestsController::class)->name('admin.requests');
-        Route::get('admin/history', AdminHistoryController::class)->name('admin.history');
-        Route::get('admin/audit', AdminAuditController::class)->name('admin.audit');
+    Route::middleware(['auth', 'permission:admin.panel.access'])->group(function () {
+        Route::get('admin/requests', AdminRequestsController::class)
+            ->middleware('permission:admin.reservas.solicitudes.view')
+            ->name('admin.requests');
+        Route::get('admin/history', AdminHistoryController::class)
+            ->middleware('permission:admin.reservas.historial.view')
+            ->name('admin.history');
+        Route::get('admin/audit', AdminAuditController::class)
+            ->middleware('permission:admin.supervision.auditoria.view')
+            ->name('admin.audit');
     });
 });
 
