@@ -136,8 +136,8 @@ const decide = (
                             <template #trigger>
                                 <Button
                                     type="button"
+                                    variant="success"
                                     size="sm"
-                                    class="bg-emerald-600 text-white hover:bg-emerald-600/90"
                                 >
                                     Aprobar
                                 </Button>

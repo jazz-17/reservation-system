@@ -308,13 +308,13 @@ watch(selectedDate, (date) => {
                 >
                     <div class="flex items-center gap-2">
                         <span
-                            class="h-2.5 w-2.5 rounded-sm bg-amber-500"
+                            class="h-2.5 w-2.5 rounded-sm bg-warning"
                         ></span>
                         Ocupado
                     </div>
                     <div class="flex items-center gap-2">
                         <span
-                            class="h-2.5 w-2.5 rounded-sm bg-slate-500"
+                            class="h-2.5 w-2.5 rounded-sm bg-muted-foreground"
                         ></span>
                         Bloqueado
                     </div>

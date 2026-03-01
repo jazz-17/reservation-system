@@ -5,6 +5,8 @@ import AdminSection from '@/components/admin/AdminSection.vue';
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatDateTime } from '@/lib/formatters';
 import adminBlackoutsRoutes from '@/routes/admin/blackouts';
@@ -41,36 +43,20 @@ const remove = (id: number): void => {
                 class="mt-4 grid gap-3 md:grid-cols-2"
             >
                 <div class="grid gap-1">
-                    <label class="text-sm" for="starts_at">Inicio</label>
-                    <input
-                        id="starts_at"
-                        name="starts_at"
-                        type="datetime-local"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                    />
+                    <Label for="starts_at">Inicio</Label>
+                    <Input id="starts_at" name="starts_at" type="datetime-local" />
                     <InputError :message="errors.starts_at" />
                 </div>
 
                 <div class="grid gap-1">
-                    <label class="text-sm" for="ends_at">Fin</label>
-                    <input
-                        id="ends_at"
-                        name="ends_at"
-                        type="datetime-local"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                    />
+                    <Label for="ends_at">Fin</Label>
+                    <Input id="ends_at" name="ends_at" type="datetime-local" />
                     <InputError :message="errors.ends_at" />
                 </div>
 
                 <div class="grid gap-1 md:col-span-2">
-                    <label class="text-sm" for="reason">Motivo</label>
-                    <input
-                        id="reason"
-                        name="reason"
-                        type="text"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        placeholder="Mantenimiento"
-                    />
+                    <Label for="reason">Motivo</Label>
+                    <Input id="reason" name="reason" type="text" placeholder="Mantenimiento" />
                     <InputError :message="errors.reason" />
                 </div>
 
@@ -111,7 +97,7 @@ const remove = (id: number): void => {
                         @confirm="remove(b.id)"
                     >
                         <template #trigger>
-                            <Button type="button" variant="outline" size="sm">
+                            <Button type="button" size="sm">
                                 Eliminar
                             </Button>
                         </template>

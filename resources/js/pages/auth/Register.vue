@@ -6,6 +6,7 @@ import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import * as appRoutes from '@/routes';
@@ -136,11 +137,10 @@ watch(selectedSchoolId, () => {
                 <div class="grid gap-6 md:grid-cols-2">
                     <div class="grid gap-2">
                         <Label for="faculty">Facultad</Label>
-                        <select
+                        <NativeSelect
                             id="faculty"
                             v-model="selectedFacultyId"
                             :tabindex="3"
-                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                         >
                             <option value="" disabled>
                                 Selecciona una facultad
@@ -152,20 +152,19 @@ watch(selectedSchoolId, () => {
                             >
                                 {{ f.name }}
                             </option>
-                        </select>
+                        </NativeSelect>
                     </div>
 
                     <div class="grid gap-2">
                         <Label for="professional_school_id"
                             >Escuela profesional</Label
                         >
-                        <select
+                        <NativeSelect
                             id="professional_school_id"
                             v-model="selectedSchoolId"
                             name="professional_school_id"
                             required
                             :tabindex="4"
-                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                             :disabled="selectedFacultyId === ''"
                         >
                             <option value="" disabled>
@@ -178,20 +177,19 @@ watch(selectedSchoolId, () => {
                             >
                                 {{ s.name }}
                             </option>
-                        </select>
+                        </NativeSelect>
                         <InputError :message="errors.professional_school_id" />
                     </div>
                 </div>
 
                 <div class="grid gap-2">
                     <Label for="base_year">Base (año)</Label>
-                    <select
+                    <NativeSelect
                         id="base_year"
                         v-model="selectedBaseYear"
                         name="base_year"
                         required
                         :tabindex="5"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                         :disabled="selectedSchool === null"
                     >
                         <option value="" disabled>Selecciona una base</option>
@@ -202,7 +200,7 @@ watch(selectedSchoolId, () => {
                         >
                             {{ baseLabel(y) }}
                         </option>
-                    </select>
+                    </NativeSelect>
                     <InputError :message="errors.base_year" />
                 </div>
 

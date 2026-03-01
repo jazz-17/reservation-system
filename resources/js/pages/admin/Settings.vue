@@ -4,6 +4,10 @@ import { computed, reactive } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Table,
     TableBody,
@@ -171,13 +175,12 @@ const leadTimePreview = computed(() => {
                 <div class="mb-3 text-sm font-medium">General</div>
                 <div class="grid gap-4 md:grid-cols-1">
                     <div class="grid gap-1">
-                        <label class="text-sm" for="timezone"
-                            >Zona horaria</label
+                        <Label for="timezone"
+                            >Zona horaria</Label
                         >
-                        <input
+                        <Input
                             id="timezone"
                             v-model="formState.timezone"
-                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                             placeholder="America/Lima"
                         />
                         <InputError :message="errors.timezone" />
@@ -189,116 +192,56 @@ const leadTimePreview = computed(() => {
                 <div class="mb-3 text-sm font-medium">Reglas</div>
                 <div class="grid gap-4 md:grid-cols-3">
                     <div class="grid gap-1">
-                        <label class="text-sm" for="min_duration_minutes"
-                            >Duración mínima (min)</label
+                        <Label for="min_duration_minutes"
+                            >Duración mínima (min)</Label
                         >
-                        <input
+                        <Input
                             id="min_duration_minutes"
                             v-model.number="formState.min_duration_minutes"
                             type="number"
-                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                         />
                         <InputError :message="errors.min_duration_minutes" />
                     </div>
 
                     <div class="grid gap-1">
-                        <label class="text-sm" for="max_duration_minutes"
-                            >Duración máxima (min)</label
-                        >
-                        <input
-                            id="max_duration_minutes"
-                            v-model.number="formState.max_duration_minutes"
-                            type="number"
-                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        />
+                        <Label for="max_duration_minutes">Duración máxima (min)</Label>
+                        <Input id="max_duration_minutes" v-model.number="formState.max_duration_minutes" type="number" />
                         <InputError :message="errors.max_duration_minutes" />
                     </div>
 
                     <div class="grid gap-1">
-                        <label class="text-sm" for="lead_time_min_hours"
-                            >Anticipación mínima (h)</label
-                        >
-                        <input
-                            id="lead_time_min_hours"
-                            v-model.number="formState.lead_time_min_hours"
-                            type="number"
-                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        />
+                        <Label for="lead_time_min_hours">Anticipación mínima (h)</Label>
+                        <Input id="lead_time_min_hours" v-model.number="formState.lead_time_min_hours" type="number" />
                         <InputError :message="errors.lead_time_min_hours" />
                     </div>
 
                     <div class="grid gap-1">
-                        <label class="text-sm" for="lead_time_max_days"
-                            >Anticipación máxima (días)</label
-                        >
-                        <input
-                            id="lead_time_max_days"
-                            v-model.number="formState.lead_time_max_days"
-                            type="number"
-                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        />
+                        <Label for="lead_time_max_days">Anticipación máxima (días)</Label>
+                        <Input id="lead_time_max_days" v-model.number="formState.lead_time_max_days" type="number" />
                         <InputError :message="errors.lead_time_max_days" />
                     </div>
 
                     <div class="grid gap-1">
-                        <label class="text-sm" for="max_active"
-                            >Máx. activas por usuario</label
-                        >
-                        <input
-                            id="max_active"
-                            v-model.number="
-                                formState.max_active_reservations_per_user
-                            "
-                            type="number"
-                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        />
-                        <InputError
-                            :message="errors.max_active_reservations_per_user"
-                        />
+                        <Label for="max_active">Máx. activas por usuario</Label>
+                        <Input id="max_active" v-model.number="formState.max_active_reservations_per_user" type="number" />
+                        <InputError :message="errors.max_active_reservations_per_user" />
                     </div>
 
                     <div class="grid gap-1">
-                        <label class="text-sm" for="weekly_quota"
-                            >Cuota semanal Escuela/Base</label
-                        >
-                        <input
-                            id="weekly_quota"
-                            v-model.number="
-                                formState.weekly_quota_per_school_base
-                            "
-                            type="number"
-                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        />
-                        <InputError
-                            :message="errors.weekly_quota_per_school_base"
-                        />
+                        <Label for="weekly_quota">Cuota semanal Escuela/Base</Label>
+                        <Input id="weekly_quota" v-model.number="formState.weekly_quota_per_school_base" type="number" />
+                        <InputError :message="errors.weekly_quota_per_school_base" />
                     </div>
 
                     <div class="grid gap-1">
-                        <label class="text-sm" for="pending_expiration"
-                            >Expiración pendiente (h)</label
-                        >
-                        <input
-                            id="pending_expiration"
-                            v-model.number="formState.pending_expiration_hours"
-                            type="number"
-                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        />
-                        <InputError
-                            :message="errors.pending_expiration_hours"
-                        />
+                        <Label for="pending_expiration">Expiración pendiente (h)</Label>
+                        <Input id="pending_expiration" v-model.number="formState.pending_expiration_hours" type="number" />
+                        <InputError :message="errors.pending_expiration_hours" />
                     </div>
 
                     <div class="grid gap-1">
-                        <label class="text-sm" for="cancel_cutoff_hours"
-                            >Corte cancelación (h)</label
-                        >
-                        <input
-                            id="cancel_cutoff_hours"
-                            v-model.number="formState.cancel_cutoff_hours"
-                            type="number"
-                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        />
+                        <Label for="cancel_cutoff_hours">Corte cancelación (h)</Label>
+                        <Input id="cancel_cutoff_hours" v-model.number="formState.cancel_cutoff_hours" type="number" />
                         <InputError :message="errors.cancel_cutoff_hours" />
                     </div>
                 </div>
@@ -315,15 +258,13 @@ const leadTimePreview = computed(() => {
                         <div class="text-sm text-muted-foreground">
                             {{ dayLabels[day] }}
                         </div>
-                        <input
+                        <Input
                             v-model="formState.opening_hours[day].open"
                             type="time"
-                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                         />
-                        <input
+                        <Input
                             v-model="formState.opening_hours[day].close"
                             type="time"
-                            class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                         />
                     </div>
                 </div>
@@ -333,13 +274,12 @@ const leadTimePreview = computed(() => {
             <div class="rounded-lg border border-border/60 p-4">
                 <div class="mb-3 text-sm font-medium">PDF</div>
                 <div class="grid gap-1 md:max-w-md">
-                    <label class="text-sm" for="pdf_template"
-                        >Plantilla activa</label
+                    <Label for="pdf_template"
+                        >Plantilla activa</Label
                     >
-                    <input
+                    <Input
                         id="pdf_template"
                         v-model="formState.pdf_template"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                         placeholder="default"
                     />
                     <InputError :message="errors.pdf_template" />
@@ -351,18 +291,14 @@ const leadTimePreview = computed(() => {
                 <div class="grid gap-4 md:grid-cols-2">
                     <div class="md:col-span-2">
                         <div class="flex items-center gap-2">
-                            <input
+                            <Checkbox
                                 id="email_notifications_enabled"
-                                v-model="formState.email_notifications_enabled"
-                                type="checkbox"
-                                class="h-4 w-4"
+                                :checked="formState.email_notifications_enabled"
+                                @update:checked="formState.email_notifications_enabled = $event"
                             />
-                            <label
-                                class="text-sm"
-                                for="email_notifications_enabled"
-                            >
+                            <Label for="email_notifications_enabled">
                                 Habilitar envío de correos
-                            </label>
+                            </Label>
                             <InputError
                                 :message="errors.email_notifications_enabled"
                             />
@@ -377,14 +313,13 @@ const leadTimePreview = computed(() => {
                         </p>
                     </div>
                     <div class="grid gap-1">
-                        <label class="text-sm" for="notify_to"
-                            >Emails admin (TO)</label
+                        <Label for="notify_to"
+                            >Emails admin (TO)</Label
                         >
-                        <textarea
+                        <Textarea
                             id="notify_to"
                             v-model="notifyTo"
                             rows="4"
-                            class="rounded-md border border-input bg-background px-3 py-2 text-sm"
                             placeholder="uno@ejemplo.com"
                             :disabled="!emailsEnabled"
                         />
@@ -393,14 +328,13 @@ const leadTimePreview = computed(() => {
                         />
                     </div>
                     <div class="grid gap-1">
-                        <label class="text-sm" for="notify_cc"
-                            >Emails admin (CC)</label
+                        <Label for="notify_cc"
+                            >Emails admin (CC)</Label
                         >
-                        <textarea
+                        <Textarea
                             id="notify_cc"
                             v-model="notifyCc"
                             rows="4"
-                            class="rounded-md border border-input bg-background px-3 py-2 text-sm"
                             :disabled="!emailsEnabled"
                         />
                         <InputError
@@ -408,14 +342,13 @@ const leadTimePreview = computed(() => {
                         />
                     </div>
                     <div class="grid gap-1 md:col-span-2">
-                        <label class="text-sm" for="notify_bcc"
-                            >Emails admin (BCC)</label
+                        <Label for="notify_bcc"
+                            >Emails admin (BCC)</Label
                         >
-                        <textarea
+                        <Textarea
                             id="notify_bcc"
                             v-model="notifyBcc"
                             rows="3"
-                            class="rounded-md border border-input bg-background px-3 py-2 text-sm"
                             :disabled="!emailsEnabled"
                         />
                         <InputError
@@ -423,16 +356,15 @@ const leadTimePreview = computed(() => {
                         />
                     </div>
                     <div class="flex items-center gap-2">
-                        <input
+                        <Checkbox
                             id="notify_student_on_approval"
-                            v-model="formState.notify_student_on_approval"
-                            type="checkbox"
-                            class="h-4 w-4"
+                            :checked="formState.notify_student_on_approval"
+                            @update:checked="formState.notify_student_on_approval = $event"
                             :disabled="!emailsEnabled"
                         />
-                        <label class="text-sm" for="notify_student_on_approval">
+                        <Label for="notify_student_on_approval">
                             Notificar al estudiante (cambios de estado)
-                        </label>
+                        </Label>
                         <InputError
                             :message="errors.notify_student_on_approval"
                         />

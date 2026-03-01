@@ -4,6 +4,8 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import AdminSection from '@/components/admin/AdminSection.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Table,
     TableBody,
@@ -44,12 +46,11 @@ useBreadcrumbs([
                 class="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto]"
             >
                 <div class="grid gap-1">
-                    <label class="text-sm" for="name">Nombre</label>
-                    <input
+                    <Label for="name">Nombre</Label>
+                    <Input
                         id="name"
                         name="name"
                         type="text"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                         placeholder="Facultad de ..."
                         required
                     />
@@ -57,7 +58,7 @@ useBreadcrumbs([
                 </div>
 
                 <div class="flex items-end">
-                    <label class="flex items-center gap-2 text-sm">
+                    <Label class="flex items-center gap-2">
                         <input type="hidden" name="active" value="0" />
                         <input
                             type="checkbox"
@@ -66,7 +67,7 @@ useBreadcrumbs([
                             checked
                         />
                         Activa
-                    </label>
+                    </Label>
                 </div>
 
                 <div class="flex items-end justify-end">
@@ -93,15 +94,15 @@ useBreadcrumbs([
                             v-slot="{ errors, processing }"
                             class="flex flex-col gap-1 md:flex-row md:items-center md:gap-2"
                         >
-                            <input
+                            <Input
                                 name="name"
                                 type="text"
-                                class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm md:w-[380px]"
-                                :value="f.name"
+                                class="md:w-[380px]"
+                                :default-value="f.name"
                                 required
                             />
                             <div class="flex items-center gap-2">
-                                <label class="flex items-center gap-2 text-sm">
+                                <Label class="flex items-center gap-2">
                                     <input
                                         type="hidden"
                                         name="active"
@@ -114,7 +115,7 @@ useBreadcrumbs([
                                         :checked="f.active"
                                     />
                                     Activa
-                                </label>
+                                </Label>
 
                                 <Button
                                     type="submit"

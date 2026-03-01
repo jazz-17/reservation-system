@@ -84,7 +84,7 @@ const user = page.props.auth.user;
                     <Link
                         :href="verificationRoutes.send()"
                         as="button"
-                        class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                        class="text-foreground underline decoration-muted-foreground/50 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current!"
                     >
                         Haz clic aquí para reenviar el correo de verificación.
                     </Link>
@@ -92,7 +92,7 @@ const user = page.props.auth.user;
 
                 <div
                     v-if="status === 'verification-link-sent'"
-                    class="mt-2 text-sm font-medium text-green-600"
+                    class="mt-2 text-sm font-medium text-success"
                 >
                     Se envió un nuevo enlace de verificación a tu correo.
                 </div>
@@ -111,7 +111,7 @@ const user = page.props.auth.user;
                 >
                     <p
                         v-show="recentlySuccessful"
-                        class="text-sm text-neutral-600"
+                        class="text-sm text-muted-foreground"
                     >
                         Guardado.
                     </p>

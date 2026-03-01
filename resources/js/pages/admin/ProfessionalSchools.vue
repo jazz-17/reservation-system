@@ -4,6 +4,9 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import AdminSection from '@/components/admin/AdminSection.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import {
     Table,
     TableBody,
@@ -46,26 +49,14 @@ useBreadcrumbs([
                 class="mt-4 grid gap-3 md:grid-cols-2"
             >
                 <div class="grid gap-1">
-                    <label class="text-sm" for="code">Código</label>
-                    <input
-                        id="code"
-                        name="code"
-                        type="text"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        placeholder="ep_sistemas"
-                        required
-                    />
+                    <Label for="code">Código</Label>
+                    <Input id="code" name="code" type="text" placeholder="ep_sistemas" required />
                     <InputError :message="errors.code" />
                 </div>
 
                 <div class="grid gap-1">
-                    <label class="text-sm" for="faculty_id">Facultad</label>
-                    <select
-                        id="faculty_id"
-                        name="faculty_id"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        required
-                    >
+                    <Label for="faculty_id">Facultad</Label>
+                    <NativeSelect id="faculty_id" name="faculty_id" required>
                         <option value="" disabled selected>
                             Selecciona una facultad
                         </option>
@@ -77,63 +68,32 @@ useBreadcrumbs([
                             {{ f.name }}
                             <span v-if="!f.active"> (inactiva)</span>
                         </option>
-                    </select>
+                    </NativeSelect>
                     <InputError :message="errors.faculty_id" />
                 </div>
 
                 <div class="grid gap-1">
-                    <label class="text-sm" for="name">Nombre</label>
-                    <input
-                        id="name"
-                        name="name"
-                        type="text"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        placeholder="E.P. Sistemas"
-                        required
-                    />
+                    <Label for="name">Nombre</Label>
+                    <Input id="name" name="name" type="text" placeholder="E.P. Sistemas" required />
                     <InputError :message="errors.name" />
                 </div>
 
                 <div class="grid gap-1">
-                    <label class="text-sm" for="base_year_min"
-                        >Base mínima (año)</label
-                    >
-                    <input
-                        id="base_year_min"
-                        name="base_year_min"
-                        type="number"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        placeholder="2018"
-                        required
-                    />
+                    <Label for="base_year_min">Base mínima (año)</Label>
+                    <Input id="base_year_min" name="base_year_min" type="number" placeholder="2018" required />
                     <InputError :message="errors.base_year_min" />
                 </div>
 
                 <div class="grid gap-1">
-                    <label class="text-sm" for="base_year_max"
-                        >Base máxima (año)</label
-                    >
-                    <input
-                        id="base_year_max"
-                        name="base_year_max"
-                        type="number"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        placeholder="2026"
-                        required
-                    />
+                    <Label for="base_year_max">Base máxima (año)</Label>
+                    <Input id="base_year_max" name="base_year_max" type="number" placeholder="2026" required />
                     <InputError :message="errors.base_year_max" />
                 </div>
 
                 <div class="flex items-center gap-2">
                     <input type="hidden" name="active" value="0" />
-                    <input
-                        id="active"
-                        type="checkbox"
-                        name="active"
-                        value="1"
-                        checked
-                    />
-                    <label class="text-sm" for="active">Activa</label>
+                    <input id="active" type="checkbox" name="active" value="1" checked />
+                    <Label for="active">Activa</Label>
                 </div>
 
                 <div class="flex items-center justify-end">
@@ -163,10 +123,9 @@ useBreadcrumbs([
                             v-slot="{ errors, processing }"
                             class="grid gap-2 md:grid-cols-[220px_150px_1fr_200px_auto]"
                         >
-                            <select
+                            <NativeSelect
                                 name="faculty_id"
-                                class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                                :value="String(s.faculty_id)"
+                                :default-value="String(s.faculty_id)"
                                 required
                             >
                                 <option
@@ -176,14 +135,13 @@ useBreadcrumbs([
                                 >
                                     {{ f.name }}
                                 </option>
-                            </select>
+                            </NativeSelect>
 
                             <div class="grid gap-1">
-                                <input
+                                <Input
                                     name="code"
                                     type="text"
-                                    class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                                    :value="s.code ?? ''"
+                                    :default-value="s.code ?? ''"
                                     placeholder="ep_sistemas"
                                     required
                                 />
@@ -196,11 +154,10 @@ useBreadcrumbs([
                             </div>
 
                             <div class="grid gap-1">
-                                <input
+                                <Input
                                     name="name"
                                     type="text"
-                                    class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                                    :value="s.name"
+                                    :default-value="s.name"
                                     required
                                 />
                                 <div
@@ -212,37 +169,26 @@ useBreadcrumbs([
                             </div>
 
                             <div class="grid grid-cols-2 gap-2">
-                                <input
+                                <Input
                                     name="base_year_min"
                                     type="number"
-                                    class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                                    :value="String(s.base_year_min)"
+                                    :default-value="String(s.base_year_min)"
                                     required
                                 />
-                                <input
+                                <Input
                                     name="base_year_max"
                                     type="number"
-                                    class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                                    :value="String(s.base_year_max)"
+                                    :default-value="String(s.base_year_max)"
                                     required
                                 />
                             </div>
 
                             <div class="flex items-center justify-end gap-2">
-                                <label class="flex items-center gap-2 text-sm">
-                                    <input
-                                        type="hidden"
-                                        name="active"
-                                        value="0"
-                                    />
-                                    <input
-                                        type="checkbox"
-                                        name="active"
-                                        value="1"
-                                        :checked="s.active"
-                                    />
+                                <Label class="flex items-center gap-2">
+                                    <input type="hidden" name="active" value="0" />
+                                    <input type="checkbox" name="active" value="1" :checked="s.active" />
                                     Activa
-                                </label>
+                                </Label>
 
                                 <Button
                                     type="submit"

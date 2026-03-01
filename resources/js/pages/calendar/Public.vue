@@ -100,11 +100,11 @@ const calendarOptions = computed<CalendarOptions>(() => ({
             class="flex flex-wrap items-center gap-3 text-sm text-muted-foreground"
         >
             <div class="flex items-center gap-2">
-                <span class="h-2.5 w-2.5 rounded-sm bg-amber-500"></span>
+                <span class="h-2.5 w-2.5 rounded-sm bg-warning"></span>
                 Ocupado
             </div>
             <div class="flex items-center gap-2">
-                <span class="h-2.5 w-2.5 rounded-sm bg-slate-500"></span>
+                <span class="h-2.5 w-2.5 rounded-sm bg-muted-foreground"></span>
                 Bloqueado
             </div>
             <div class="ml-auto text-xs">

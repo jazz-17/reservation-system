@@ -8,24 +8,24 @@ const props = defineProps<{
     status: ReservationStatus;
 }>();
 
-const variantClasses = computed(() => {
+const badgeVariant = computed(() => {
     switch (props.status) {
         case 'pending':
-            return 'border-transparent bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+            return 'warning';
         case 'approved':
-            return 'border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
+            return 'success';
         case 'rejected':
-            return 'border-transparent bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
+            return 'destructive';
         case 'cancelled':
-            return 'border-transparent bg-muted text-muted-foreground';
+            return 'secondary';
         default:
-            return 'border-transparent bg-muted text-muted-foreground';
+            return 'secondary';
     }
 });
 </script>
 
 <template>
-    <Badge variant="outline" :class="variantClasses">
+    <Badge :variant="badgeVariant">
         {{ formatReservationStatus(props.status) }}
     </Badge>
 </template>

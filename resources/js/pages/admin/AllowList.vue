@@ -4,6 +4,8 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import AdminSection from '@/components/admin/AdminSection.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import adminAllowListRoutes from '@/routes/admin/allow-list';
 import adminRequestsRoutes from '@/routes/admin/requests';
@@ -75,26 +77,22 @@ useBreadcrumbs([
             </p>
 
             <Form
-                v-bind="adminAllowListRoutes.importMethod.form()"
+                v-bind="adminAllowListRoutes.import.form()"
                 enctype="multipart/form-data"
                 v-slot="{ errors, processing }"
                 class="mt-4 grid gap-3"
             >
                 <div class="grid gap-1">
-                    <label class="text-sm" for="mode">Modo</label>
-                    <select
-                        id="mode"
-                        name="mode"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                    >
+                    <Label for="mode">Modo</Label>
+                    <NativeSelect id="mode" name="mode">
                         <option value="merge">Fusionar</option>
                         <option value="replace">Reemplazar</option>
-                    </select>
+                    </NativeSelect>
                     <InputError :message="errors.mode" />
                 </div>
 
                 <div class="grid gap-1">
-                    <label class="text-sm" for="file">Archivo</label>
+                    <Label for="file">Archivo</Label>
                     <input
                         id="file"
                         name="file"

@@ -10,8 +10,21 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Facades\Excel;
+
+test('allow-list page renders', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->get(route('admin.allow-list.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/AllowList')
+            ->has('count')
+        );
+});
 
 test('allow-list import supports merge mode (csv) with report + audit', function () {
     $admin = User::factory()->admin()->create();

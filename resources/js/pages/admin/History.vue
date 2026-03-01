@@ -5,6 +5,9 @@ import { computed, ref } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import AdminSection from '@/components/admin/AdminSection.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     Table,
@@ -62,36 +65,22 @@ const { data, isLoading, isError } = useQuery({
         <AdminSection>
             <div class="grid gap-3 md:grid-cols-3">
                 <div class="grid gap-1">
-                    <label class="text-sm" for="status">Estado</label>
-                    <select
-                        id="status"
-                        v-model="status"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                    >
+                    <Label for="status">Estado</Label>
+                    <NativeSelect id="status" v-model="status">
                         <option value="">Todos</option>
                         <option value="pending">Pendiente</option>
                         <option value="approved">Aprobada</option>
                         <option value="rejected">Rechazada</option>
                         <option value="cancelled">Cancelada</option>
-                    </select>
+                    </NativeSelect>
                 </div>
                 <div class="grid gap-1">
-                    <label class="text-sm" for="from">Desde</label>
-                    <input
-                        id="from"
-                        v-model="from"
-                        type="date"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                    />
+                    <Label for="from">Desde</Label>
+                    <Input id="from" v-model="from" type="date" />
                 </div>
                 <div class="grid gap-1">
-                    <label class="text-sm" for="to">Hasta</label>
-                    <input
-                        id="to"
-                        v-model="to"
-                        type="date"
-                        class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                    />
+                    <Label for="to">Hasta</Label>
+                    <Input id="to" v-model="to" type="date" />
                 </div>
             </div>
         </AdminSection>
