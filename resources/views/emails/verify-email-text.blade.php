@@ -1,9 +1,9 @@
-Hola{{ $displayName ? ', '.$displayName : '' }},
+Hola{{ $displayName ? ' '.$displayName : '' }},
 
 Para completar su registro en {{ $appName }}, verifique su correo electrónico.
 
 Verificar correo:
-{{ $url }}
+{!! $url !!}
 
 Este enlace expira en {{ $expiresMinutes }} minutos.
 

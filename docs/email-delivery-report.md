@@ -16,29 +16,8 @@ Objetivo: documentar **todas** las situaciones en las que la app envía correos,
 Mailers relevantes:
 
 - `smtp` (útil con Mailpit en local)
-- `smtp2go` (transporte custom vía API)
+- `ses` (opcional, si se configura Amazon SES)
 - `log` (no entrega; escribe en logs)
-
-### 1.2 Transporte SMTP2GO (API, no SMTP relay)
-
-- Registro del transporte: `app/Providers/AppServiceProvider.php` (`Mail::extend('smtp2go', ...)`)
-- Implementación: `app/Mail/Transports/Smtp2GoTransport.php`
-- Config credenciales: `config/services.php` (`SMTP2GO_API_KEY`, `SMTP2GO_ENDPOINT`, `SMTP2GO_TIMEOUT`, `SMTP2GO_FASTACCEPT`)
-
-Cómo funciona:
-
-1) Laravel construye un email (Mailable o Notification → Symfony Mime Email).
-2) Si `MAIL_MAILER=smtp2go`, `Smtp2GoTransport` hace `POST {endpoint}/email/send` con:
-   - `sender` (From)
-   - `to` / `cc` / `bcc`
-   - `subject`
-   - `html_body` y/o `text_body`
-   - `attachments` (base64) e `inlines` (base64)
-3) Si SMTP2GO responde fallas, se lanza `TransportException`.
-
-Docs internos del proyecto:
-
-- `docs/smtp2go/laravel-integration.md`
 
 ## 2) Correos del dominio “Reservas” (status + PDF)
 
@@ -171,7 +150,6 @@ Notas:
 
 Cobertura relevante:
 
-- Transporte SMTP2GO: `tests/Feature/Mail/Smtp2GoTransportTest.php`
 - Envío de VerifyEmail/ResetPassword por admin: `tests/Feature/AdminUserManagementTest.php`
 - Flujo end-to-end de approve/reject/cancel + artifacts + queue: `tests/Feature/ReservationWorkflowTest.php`
 

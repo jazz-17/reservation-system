@@ -32,7 +32,7 @@ Leyenda de estado:
 - Creación/aprobación/rechazo/cancelación + colas (PDF/email): `app/Actions/Reservations/ReservationService.php`, `app/Jobs/GenerateReservationPdf.php`, `app/Jobs/SendReservationEmail.php`.
 - Calendario y disponibilidad: `app/Actions/Reservations/AvailabilityService.php`, `app/Http/Controllers/Api/PublicAvailabilityController.php`.
 - Registro con allow-list: `app/Actions/Fortify/CreateNewUser.php`, `allow_list_entries` (tabla).
-- Pruebas relevantes (Pest): `tests/Feature/Auth/RegistrationTest.php`, `tests/Feature/ReservationWorkflowTest.php`, `tests/Feature/AdminAllowListAndBlackoutsTest.php`, `tests/Feature/AdminUserManagementTest.php`, `tests/Feature/Mail/Smtp2GoTransportTest.php`, `tests/Feature/ReservationPdfDownloadTest.php`.
+- Pruebas relevantes (Pest): `tests/Feature/ReservationWorkflowTest.php`, `tests/Feature/Auth/VerificationNotificationTest.php`, `tests/Feature/Console/MailTestCommandTest.php`, `tests/Feature/AdminAllowListAndBlackoutsTest.php`, `tests/Feature/AdminUserManagementTest.php`, `tests/Feature/ReservationPdfDownloadTest.php`.
 
 ## Requisitos funcionales (RF)
 

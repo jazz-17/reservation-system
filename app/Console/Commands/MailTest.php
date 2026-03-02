@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Mail\MailDeliveryState;
 use Illuminate\Console\Command;
 use Illuminate\Mail\Message;
 use Illuminate\Support\Facades\Mail;
@@ -9,33 +10,35 @@ use Illuminate\Support\HtmlString;
 use Symfony\Component\Mailer\Exception\TransportException;
 use Throwable;
 
-class MailTestSmtp2Go extends Command
+class MailTest extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'mail:test-smtp2go
+    protected $signature = 'mail:test
         {to : Recipient email address}
-        {--subject=SMTP2GO test : Email subject}
+        {--subject=Mail test : Email subject}
         {--text=This is a test email. : Plain-text body}
         {--html= : Optional HTML body}
-        {--mailer=smtp2go : Mailer name (default: smtp2go)}';
+        {--mailer= : Mailer name (defaults to mail.default)}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Send a test email using the configured mailer (default: smtp2go)';
+    protected $description = 'Send a test email using the configured mailer';
 
     public function handle(): int
     {
         $to = (string) $this->argument('to');
         $subject = (string) $this->option('subject');
         $text = (string) $this->option('text');
-        $mailer = (string) $this->option('mailer');
+
+        $mailer = $this->option('mailer');
+        $mailer = is_string($mailer) && trim($mailer) !== '' ? trim($mailer) : null;
 
         $html = $this->option('html');
         $html = is_string($html) && trim($html) !== '' ? $html : null;
@@ -54,29 +57,13 @@ class MailTestSmtp2Go extends Command
         $this->line('=== Mail diagnostics ===');
         $this->line('MAIL_DELIVERY_ENABLED: '.($deliveryEnabled ? 'true' : 'false'));
         $this->line("mail.default: {$mailDefault}");
-        $this->line("mailer: {$mailer}");
+        $this->line('mailer: '.($mailer ?? '(default)'));
         $this->line("from: {$fromName} <{$fromAddress}>");
 
         if (! $deliveryEnabled) {
             $this->warn('Outbound email delivery is disabled (MAIL_DELIVERY_ENABLED=false).');
-            $this->warn('Enable it to confirm real delivery.');
 
             return self::FAILURE;
-        }
-
-        if ($mailer === 'smtp2go') {
-            $endpoint = (string) config('services.smtp2go.endpoint', '');
-            $key = (string) config('services.smtp2go.key', '');
-
-            $this->line('=== SMTP2GO diagnostics ===');
-            $this->line("endpoint: {$endpoint}");
-            $this->line('key_set: '.($key !== '' ? 'true' : 'false'));
-
-            if ($key === '') {
-                $this->error('Missing SMTP2GO API key (SMTP2GO_API_KEY).');
-
-                return self::FAILURE;
-            }
         }
 
         $view = [
@@ -86,6 +73,8 @@ class MailTestSmtp2Go extends Command
         if (is_string($html) && $html !== '') {
             $view['html'] = new HtmlString($html);
         }
+
+        MailDeliveryState::reset();
 
         try {
             Mail::mailer($mailer)->send($view, [], function (Message $message) use ($to, $subject): void {
@@ -97,6 +86,12 @@ class MailTestSmtp2Go extends Command
             return self::FAILURE;
         } catch (Throwable $exception) {
             $this->error(get_class($exception).': '.$exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        if (MailDeliveryState::wasSuppressed()) {
+            $this->warn('Mail was suppressed by MAIL_DELIVERY_ENABLED.');
 
             return self::FAILURE;
         }

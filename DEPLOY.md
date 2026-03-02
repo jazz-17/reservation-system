@@ -78,6 +78,8 @@ sudo chown -R 1000:1000 /srv/reservation-system/storage
 #    Use --env-file so Compose reads DB_PASSWORD (and other variables) from .env.production.
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 
+# NOTE: `docker-compose.prod.yml` includes a `queue` service that processes queued jobs (PDF generation, reservation emails, and email verification notifications).
+
 # 5. Run migrations and seed
 docker compose --env-file .env.production -f docker-compose.prod.yml exec app php artisan migrate --force
 docker compose --env-file .env.production -f docker-compose.prod.yml exec app php artisan db:seed --force
@@ -100,6 +102,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml exec app ki
 ```bash
 # View logs
 docker compose --env-file .env.production -f docker-compose.prod.yml logs -f app
+docker compose --env-file .env.production -f docker-compose.prod.yml logs -f queue
 
 # Restart services
 docker compose --env-file .env.production -f docker-compose.prod.yml restart

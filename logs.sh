@@ -24,10 +24,6 @@ case "${1:-laravel}" in
     LOG_FILE="${LOG_FILE:-storage/logs/laravel.log}"
     $DC exec app tail -n "$LINES" -f "$LOG_FILE"
     ;;
-  smtp2go)
-    echo "=== SMTP2GO log (last $LINES lines, following) ==="
-    $DC exec app tail -n "$LINES" -f storage/logs/smtp2go.log
-    ;;
   docker)
     echo "=== Docker container logs ==="
     $DC logs -f --tail="${2:-100}" app

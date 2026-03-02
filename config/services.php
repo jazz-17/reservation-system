@@ -28,18 +28,6 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
-    'smtp2go' => [
-        'key' => env('SMTP2GO_API_KEY'),
-        'endpoint' => env('SMTP2GO_ENDPOINT', 'https://api.smtp2go.com/v3'),
-        'timeout' => (int) env('SMTP2GO_TIMEOUT', 10),
-        'fastaccept' => (bool) env('SMTP2GO_FASTACCEPT', false),
-        'log' => (bool) env('SMTP2GO_LOG', false),
-        'log_channel' => env('SMTP2GO_LOG_CHANNEL', 'smtp2go'),
-        'log_level' => env('SMTP2GO_LOG_LEVEL', 'debug'),
-        'log_response' => (bool) env('SMTP2GO_LOG_RESPONSE', true),
-        'log_payload' => (bool) env('SMTP2GO_LOG_PAYLOAD', false),
-    ],
-
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

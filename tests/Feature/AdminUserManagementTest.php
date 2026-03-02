@@ -2,8 +2,8 @@
 
 use App\Models\AuditEvent;
 use App\Models\User;
+use App\Notifications\QueuedVerifyEmail;
 use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -121,6 +121,6 @@ test('admin can send password reset and verification emails and audits', functio
         ->post(route('admin.users.email-verification.store', $target))
         ->assertRedirect();
 
-    Notification::assertSentTo($target, VerifyEmail::class);
+    Notification::assertSentTo($target, QueuedVerifyEmail::class);
     expect(AuditEvent::query()->where('event_type', 'user.verification_sent')->exists())->toBeTrue();
 });

@@ -305,6 +305,11 @@ test('pending reservations can expire via artisan command', function () {
 test('students can cancel a pending reservation', function () {
     Queue::fake();
 
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_admin_emails'],
+        ['value' => ['to' => [], 'cc' => [], 'bcc' => []], 'updated_by' => null],
+    );
+
     $user = User::factory()->create();
     $this->actingAs($user);
 
@@ -356,6 +361,11 @@ test('cancellation cutoff is enforced', function () {
 
 test('approved reservations can be cancelled by the student', function () {
     Queue::fake();
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_admin_emails'],
+        ['value' => ['to' => [], 'cc' => [], 'bcc' => []], 'updated_by' => null],
+    );
 
     $user = User::factory()->create();
     $this->actingAs($user);

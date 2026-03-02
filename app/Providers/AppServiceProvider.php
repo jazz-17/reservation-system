@@ -2,15 +2,14 @@
 
 namespace App\Providers;
 
-use App\Mail\Transports\Smtp2GoTransport;
 use App\Models\Reservation;
 use App\Policies\ReservationPolicy;
 use Carbon\CarbonImmutable;
-use Illuminate\Http\Client\Factory as HttpFactory;
+use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -31,21 +30,8 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(Reservation::class, ReservationPolicy::class);
 
-        $this->configureMailTransports();
         $this->configureDefaults();
-    }
-
-    protected function configureMailTransports(): void
-    {
-        Mail::extend('smtp2go', function (): Smtp2GoTransport {
-            return new Smtp2GoTransport(
-                http: $this->app->make(HttpFactory::class),
-                apiKey: (string) config('services.smtp2go.key'),
-                endpoint: (string) config('services.smtp2go.endpoint', 'https://api.smtp2go.com/v3'),
-                timeoutSeconds: (int) config('services.smtp2go.timeout', 10),
-                fastaccept: (bool) config('services.smtp2go.fastaccept', false),
-            );
-        });
+        $this->configureAuthNotifications();
     }
 
     /**
@@ -68,5 +54,32 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null
         );
+    }
+
+    protected function configureAuthNotifications(): void
+    {
+        VerifyEmail::toMailUsing(function (object $notifiable, string $url): MailMessage {
+            $firstName = data_get($notifiable, 'first_name');
+            $lastName = data_get($notifiable, 'last_name');
+
+            $displayName = trim(implode(' ', array_filter([
+                is_string($firstName) ? $firstName : null,
+                is_string($lastName) ? $lastName : null,
+            ])));
+
+            if ($displayName === '') {
+                $name = data_get($notifiable, 'name');
+                $displayName = is_string($name) ? $name : null;
+            }
+
+            return (new MailMessage)
+                ->subject('Verifique su correo electrónico')
+                ->view(['html' => 'emails.verify-email', 'text' => 'emails.verify-email-text'], [
+                    'appName' => (string) config('app.name'),
+                    'displayName' => $displayName,
+                    'expiresMinutes' => (int) config('auth.verification.expire', 60),
+                    'url' => $url,
+                ]);
+        });
     }
 }

@@ -27,7 +27,7 @@ return [
     |
     */
 
-    'delivery_enabled' => env('MAIL_DELIVERY_ENABLED'),
+    'delivery_enabled' => env('MAIL_DELIVERY_ENABLED', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -49,10 +49,6 @@ return [
     */
 
     'mailers' => [
-
-        'smtp2go' => [
-            'transport' => 'smtp2go',
-        ],
 
         'smtp' => [
             'transport' => 'smtp',
