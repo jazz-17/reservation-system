@@ -522,7 +522,7 @@ test('public availability returns calendar events for a date range', function ()
     expect($blackoutEvent['display'] ?? null)->toBe('background');
 });
 
-test('public availability does not show pending reservations', function () {
+test('public availability shows pending reservations as solicitado', function () {
     $timezone = 'America/Lima';
     $date = CarbonImmutable::now($timezone)->addDay()->format('Y-m-d');
     $endDate = CarbonImmutable::parse($date, $timezone)->addDay()->format('Y-m-d');
@@ -542,7 +542,79 @@ test('public availability does not show pending reservations', function () {
 
     $response->assertOk();
 
-    $reservationEvents = collect($response->json())->where('extendedProps.type', 'reservation');
+    $pendingEvent = collect($response->json())->firstWhere('extendedProps.type', 'pending');
+    expect($pendingEvent)->not->toBeNull();
+    expect($pendingEvent['title'])->toBe('Solicitado');
+    expect($pendingEvent['color'])->toBe('#3b82f6');
+});
+
+test('public availability returns both approved and pending events with distinct types', function () {
+    $timezone = 'America/Lima';
+    $date = CarbonImmutable::now($timezone)->addDay()->format('Y-m-d');
+    $endDate = CarbonImmutable::parse($date, $timezone)->addDay()->format('Y-m-d');
+
+    $startUtc = CarbonImmutable::parse("{$date} 10:00", $timezone)->setTimezone('UTC');
+
+    Reservation::factory()->create([
+        'status' => ReservationStatus::Approved,
+        'starts_at' => $startUtc,
+        'ends_at' => $startUtc->addHour(),
+    ]);
+
+    Reservation::factory()->create([
+        'status' => ReservationStatus::Pending,
+        'starts_at' => $startUtc->addHours(2),
+        'ends_at' => $startUtc->addHours(3),
+    ]);
+
+    $response = $this->getJson(route('api.public.availability', [
+        'start' => $date,
+        'end' => $endDate,
+    ]));
+
+    $response->assertOk();
+
+    $events = collect($response->json());
+
+    $approvedEvent = $events->firstWhere('extendedProps.type', 'reservation');
+    expect($approvedEvent)->not->toBeNull();
+    expect($approvedEvent['title'])->toBe('Ocupado');
+    expect($approvedEvent['color'])->toBe('#f59e0b');
+
+    $pendingEvent = $events->firstWhere('extendedProps.type', 'pending');
+    expect($pendingEvent)->not->toBeNull();
+    expect($pendingEvent['title'])->toBe('Solicitado');
+    expect($pendingEvent['color'])->toBe('#3b82f6');
+});
+
+test('public availability does not show rejected or cancelled reservations', function () {
+    $timezone = 'America/Lima';
+    $date = CarbonImmutable::now($timezone)->addDay()->format('Y-m-d');
+    $endDate = CarbonImmutable::parse($date, $timezone)->addDay()->format('Y-m-d');
+
+    $startUtc = CarbonImmutable::parse("{$date} 10:00", $timezone)->setTimezone('UTC');
+
+    Reservation::factory()->create([
+        'status' => ReservationStatus::Rejected,
+        'starts_at' => $startUtc,
+        'ends_at' => $startUtc->addHour(),
+    ]);
+
+    Reservation::factory()->create([
+        'status' => ReservationStatus::Cancelled,
+        'starts_at' => $startUtc->addHours(2),
+        'ends_at' => $startUtc->addHours(3),
+    ]);
+
+    $response = $this->getJson(route('api.public.availability', [
+        'start' => $date,
+        'end' => $endDate,
+    ]));
+
+    $response->assertOk();
+
+    $events = collect($response->json());
+    $reservationEvents = $events->whereIn('extendedProps.type', ['reservation', 'pending']);
     expect($reservationEvents)->toBeEmpty();
 });
 

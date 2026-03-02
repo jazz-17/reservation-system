@@ -98,4 +98,9 @@ defineExpose({
 .app-calendar--no-today :deep(.fc .fc-day-today) {
     background: transparent !important;
 }
+
+.app-calendar :deep(.fc-event--pending) {
+    opacity: 0.7;
+    border: 1.5px dashed currentColor !important;
+}
 </style>

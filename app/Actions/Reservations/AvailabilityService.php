@@ -4,6 +4,7 @@ namespace App\Actions\Reservations;
 
 use App\Actions\Settings\SettingsService;
 use App\Models\Blackout;
+use App\Models\Enums\ReservationStatus;
 use App\Models\Reservation;
 use Carbon\CarbonImmutable;
 
@@ -27,6 +28,12 @@ class AvailabilityService
             ->orderBy('starts_at')
             ->get(['starts_at', 'ends_at']);
 
+        $pendingReservations = Reservation::query()
+            ->where('status', ReservationStatus::Pending)
+            ->overlapping($startUtc, $endUtc)
+            ->orderBy('starts_at')
+            ->get(['starts_at', 'ends_at']);
+
         $blackouts = Blackout::query()
             ->where('starts_at', '<', $endUtc)
             ->where('ends_at', '>', $startUtc)
@@ -43,6 +50,18 @@ class AvailabilityService
                 'color' => '#f59e0b',
                 'extendedProps' => [
                     'type' => 'reservation',
+                ],
+            ];
+        }
+
+        foreach ($pendingReservations as $pending) {
+            $events[] = [
+                'title' => 'Solicitado',
+                'start' => $pending->starts_at->setTimezone($timezone)->toIso8601String(),
+                'end' => $pending->ends_at->setTimezone($timezone)->toIso8601String(),
+                'color' => '#3b82f6',
+                'extendedProps' => [
+                    'type' => 'pending',
                 ],
             ];
         }

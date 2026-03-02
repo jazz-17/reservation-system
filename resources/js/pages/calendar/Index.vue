@@ -20,7 +20,7 @@ defineOptions({ layout: AppLayout });
 
 type CalendarEvent = EventInput & {
     extendedProps?: {
-        type: 'reservation' | 'blackout';
+        type: 'reservation' | 'blackout' | 'pending';
     };
 };
 
@@ -48,6 +48,12 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     displayEventTime: false,
     fixedWeekCount: false,
     dayMaxEvents: true,
+    eventClassNames: (arg) => {
+        if (arg.event.extendedProps?.type === 'pending') {
+            return ['fc-event--pending'];
+        }
+        return [];
+    },
     dateClick: (info) => {
         router.visit(
             reservationsRoutes.create.url({
@@ -102,6 +108,12 @@ const calendarOptions = computed<CalendarOptions>(() => ({
             <div class="flex items-center gap-2">
                 <span class="h-2.5 w-2.5 rounded-sm bg-warning"></span>
                 Ocupado
+            </div>
+            <div class="flex items-center gap-2">
+                <span
+                    class="h-2.5 w-2.5 rounded-sm border border-dashed border-blue-500 bg-blue-500 opacity-70"
+                ></span>
+                Solicitado
             </div>
             <div class="flex items-center gap-2">
                 <span class="h-2.5 w-2.5 rounded-sm bg-muted-foreground"></span>

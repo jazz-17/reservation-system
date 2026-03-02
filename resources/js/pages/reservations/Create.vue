@@ -25,7 +25,7 @@ type OpeningHours = Record<
 
 type CalendarEvent = EventInput & {
     extendedProps?: {
-        type: 'reservation' | 'blackout';
+        type: 'reservation' | 'blackout' | 'pending';
     };
 };
 
@@ -71,6 +71,7 @@ const endTime = ref<string>('');
 
 const isLoading = ref(false);
 const loadError = ref(false);
+const loadedEvents = ref<CalendarEvent[]>([]);
 const isSyncingFromCalendar = ref(false);
 const isSyncingFromInput = ref(false);
 
@@ -160,6 +161,48 @@ const canSubmit = computed(() => {
     return durationMinutes.value !== null;
 });
 
+const overlap = computed(
+    (): { hasApprovedOverlap: boolean; hasPendingOverlap: boolean } | null => {
+        if (!startsAtValue.value || !endsAtValue.value || !durationMinutes.value) {
+            return null;
+        }
+
+        const userStart = new Date(`${startsAtValue.value}`);
+        const userEnd = new Date(`${endsAtValue.value}`);
+
+        if (isNaN(userStart.getTime()) || isNaN(userEnd.getTime())) {
+            return null;
+        }
+
+        let hasApprovedOverlap = false;
+        let hasPendingOverlap = false;
+
+        for (const event of loadedEvents.value) {
+            const type = event.extendedProps?.type;
+            if (type === 'blackout') {
+                continue;
+            }
+
+            const eventStart = new Date(event.start as string);
+            const eventEnd = new Date(event.end as string);
+
+            if (eventStart < userEnd && eventEnd > userStart) {
+                if (type === 'reservation') {
+                    hasApprovedOverlap = true;
+                } else if (type === 'pending') {
+                    hasPendingOverlap = true;
+                }
+            }
+        }
+
+        if (!hasApprovedOverlap && !hasPendingOverlap) {
+            return null;
+        }
+
+        return { hasApprovedOverlap, hasPendingOverlap };
+    },
+);
+
 const dayToDaysOfWeek: Record<keyof OpeningHours, number> = {
     mon: 1,
     tue: 2,
@@ -225,6 +268,12 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     buttonText: {
         today: 'Hoy',
     },
+    eventClassNames: (arg) => {
+        if (arg.event.extendedProps?.type === 'pending') {
+            return ['fc-event--pending'];
+        }
+        return [];
+    },
     events: async (
         info: EventSourceFuncArg,
         success: (events: EventInput[]) => void,
@@ -240,6 +289,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
                 }),
             );
 
+            loadedEvents.value = events;
             success(events);
         } catch (error) {
             loadError.value = true;
@@ -311,6 +361,12 @@ watch(selectedDate, (date) => {
                             class="h-2.5 w-2.5 rounded-sm bg-warning"
                         ></span>
                         Ocupado
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span
+                            class="h-2.5 w-2.5 rounded-sm border border-dashed border-blue-500 bg-blue-500 opacity-70"
+                        ></span>
+                        Solicitado
                     </div>
                     <div class="flex items-center gap-2">
                         <span
@@ -461,6 +517,36 @@ watch(selectedDate, (date) => {
                         <div class="mt-2 text-xs text-muted-foreground">
                             Mín: {{ props.min_duration_minutes }} min · Máx:
                             {{ props.max_duration_minutes }} min
+                        </div>
+                    </div>
+
+                    <div
+                        v-if="overlap"
+                        class="rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-700 dark:text-amber-400"
+                    >
+                        <div class="flex items-start gap-2">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="mt-0.5 h-4 w-4 shrink-0"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                            <div>
+                                <p v-if="overlap.hasApprovedOverlap">
+                                    El horario se superpone con una reserva
+                                    confirmada.
+                                </p>
+                                <p v-if="overlap.hasPendingOverlap">
+                                    El horario se superpone con una solicitud
+                                    pendiente.
+                                </p>
+                            </div>
                         </div>
                     </div>
 
