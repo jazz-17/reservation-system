@@ -5,57 +5,63 @@ namespace App\Actions\Settings;
 use App\Actions\Audit\Audit;
 use App\Models\Setting;
 use App\Models\User;
-use Illuminate\Support\Arr;
+use App\Settings\Exceptions\MissingSettingsException;
+use App\Settings\SettingsSchema;
+use Illuminate\Support\Facades\DB;
 
 class SettingsService
 {
+    /**
+     * @var array<string, mixed>|null
+     */
+    private ?array $cache = null;
+
     /**
      * @return array<string, mixed>
      */
     public function all(): array
     {
-        $defaults = SettingsDefaults::values();
-        $stored = Setting::query()->get()->keyBy('key');
-
-        $merged = $defaults;
-
-        foreach ($stored as $key => $setting) {
-            $merged[$key] = $setting->value;
-        }
-
-        return $this->normalize($merged);
+        return $this->load();
     }
 
     public function getString(string $key): string
     {
-        $value = $this->get($key);
+        $value = $this->getRequired($key);
 
         return is_string($value) ? $value : (string) $value;
     }
 
     public function getInt(string $key): int
     {
-        $value = $this->get($key);
+        $value = $this->getRequired($key);
 
         return (int) $value;
     }
 
     public function getBool(string $key): bool
     {
-        $value = $this->get($key);
+        $value = $this->getRequired($key);
 
         return (bool) $value;
     }
 
     public function get(string $key): mixed
     {
-        $setting = Setting::query()->find($key);
+        return $this->getRequired($key);
+    }
 
-        if ($setting !== null) {
-            return $setting->value;
+    public function getRequired(string $key): mixed
+    {
+        $values = $this->load();
+
+        if (! array_key_exists($key, $values)) {
+            throw new MissingSettingsException(
+                missingKeys: [$key],
+                message: sprintf('Missing required settings key: %s. Run `php artisan settings:sync`.', $key),
+            );
         }
 
-        return SettingsDefaults::values()[$key] ?? null;
+        return $values[$key];
     }
 
     /**
@@ -63,19 +69,19 @@ class SettingsService
      */
     public function setMany(array $values, User $actor): void
     {
-        $normalized = $this->normalize($values);
-        $defaults = SettingsDefaults::values();
+        $normalized = SettingsSchema::validate($values);
+        $allowedKeys = array_flip(SettingsSchema::keys());
 
         $changedKeys = [];
 
-        $allowed = array_intersect_key($normalized, $defaults);
+        $allowed = array_intersect_key($normalized, $allowedKeys);
         $existing = Setting::query()
             ->whereIn('key', array_keys($allowed))
             ->get()
             ->keyBy('key');
 
         foreach ($allowed as $key => $value) {
-            $previousValue = $existing->get($key)?->value ?? ($defaults[$key] ?? null);
+            $previousValue = $existing->get($key)?->value;
 
             if ($this->valuesDiffer($previousValue, $value)) {
                 $changedKeys[] = $key;
@@ -92,28 +98,29 @@ class SettingsService
                 'changed_keys' => array_values($changedKeys),
             ]);
         }
+
+        $this->cache = null;
     }
 
-    /**
-     * @param  array<string, mixed>  $settings
-     * @return array<string, mixed>
-     */
-    private function normalize(array $settings): array
+    public function resetToDefaults(User $actor): void
     {
-        if (array_key_exists('notify_admin_emails', $settings)) {
-            $notify = $settings['notify_admin_emails'];
+        $defaults = SettingsSchema::defaults();
+        $validated = SettingsSchema::validate($defaults);
 
-            if (is_array($notify) && Arr::isList($notify)) {
-                $settings['notify_admin_emails'] = ['to' => $notify, 'cc' => [], 'bcc' => []];
+        DB::transaction(function () use ($validated, $actor): void {
+            foreach ($validated as $key => $value) {
+                Setting::query()->updateOrCreate(
+                    ['key' => $key],
+                    ['value' => $value, 'updated_by' => $actor->id],
+                );
             }
+        });
 
-            $settings['notify_admin_emails'] = array_merge(
-                ['to' => [], 'cc' => [], 'bcc' => []],
-                is_array($settings['notify_admin_emails']) ? $settings['notify_admin_emails'] : [],
-            );
-        }
+        Audit::record('settings.reset_to_defaults', actor: $actor, subject: null, metadata: [
+            'keys' => array_keys($validated),
+        ]);
 
-        return $settings;
+        $this->cache = null;
     }
 
     private function valuesDiffer(mixed $left, mixed $right): bool
@@ -123,5 +130,51 @@ class SettingsService
         }
 
         return $left !== $right;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function load(): array
+    {
+        if ($this->cache !== null) {
+            return $this->cache;
+        }
+
+        $keys = SettingsSchema::keys();
+
+        $stored = Setting::query()
+            ->whereIn('key', $keys)
+            ->get()
+            ->keyBy('key');
+
+        $missing = [];
+        $values = [];
+
+        foreach ($keys as $key) {
+            $setting = $stored->get($key);
+
+            if ($setting === null) {
+                $missing[] = $key;
+
+                continue;
+            }
+
+            $values[$key] = $setting->value;
+        }
+
+        if ($missing !== []) {
+            throw new MissingSettingsException(
+                missingKeys: $missing,
+                message: sprintf(
+                    'Missing required settings keys: %s. Run `php artisan settings:sync`.',
+                    implode(', ', $missing),
+                ),
+            );
+        }
+
+        $this->cache = SettingsSchema::validate($values);
+
+        return $this->cache;
     }
 }

@@ -6,7 +6,7 @@ export type ReservationStatus =
 
 export type ArtifactKind = 'pdf' | 'email_admin' | 'email_student';
 
-export type ArtifactStatus = 'pending' | 'sent' | 'failed';
+export type ArtifactStatus = 'pending' | 'sent' | 'failed' | 'skipped';
 
 export type AdminUser = {
     id: number;
@@ -109,10 +109,7 @@ export type AdminSettings = {
     weekly_quota_per_school_base: number;
     pending_expiration_hours: number;
     cancel_cutoff_hours: number;
-    email_notifications_enabled: boolean;
     notify_admin_emails: { to: string[]; cc: string[]; bcc: string[] };
-    notify_student_on_approval: boolean;
-    pdf_template: string;
 };
 
 export type ImportReport = {
@@ -121,4 +118,14 @@ export type ImportReport = {
     invalid: number;
     invalid_rows: Array<{ row: number; value: string | null }>;
     batch_id: string;
+};
+
+export type ManagedUser = {
+    id: number;
+    name: string;
+    email: string;
+    roles: string[];
+    email_verified_at: string | null;
+    disabled_at: string | null;
+    created_at: string | null;
 };

@@ -8,7 +8,9 @@ use App\Http\Controllers\Admin\ProfessionalSchoolController;
 use App\Http\Controllers\Admin\ReservationArtifactController;
 use App\Http\Controllers\Admin\ReservationHistoryController;
 use App\Http\Controllers\Admin\ReservationRequestController;
+use App\Http\Controllers\Admin\RolesPermissionsController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Api\AdminAuditController;
 use App\Http\Controllers\Api\AdminHistoryController;
 use App\Http\Controllers\Api\AdminRequestsController;
@@ -24,11 +26,11 @@ Route::redirect('/', '/calendario')->name('home');
 
 Route::get('dashboard', function () {
     return \Inertia\Inertia::render('Dashboard');
-})->middleware(['auth'])->name('dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('calendario', PublicCalendarController::class)->name('calendar.public');
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('mi-calendario', CalendarController::class)->name('calendar.index');
     Route::get('reservas', [ReservationController::class, 'index'])->name('reservations.index');
     Route::get('reservas/nueva', [ReservationController::class, 'create'])->name('reservations.create');
@@ -42,7 +44,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('reservations.cancel');
 });
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'permission:admin.panel.access'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'permission:admin.panel.access'])->group(function () {
     Route::get('solicitudes', [ReservationRequestController::class, 'index'])
         ->middleware('permission:admin.reservas.solicitudes.view')
         ->name('requests.index');
@@ -63,6 +65,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'permission:admin.pa
     Route::put('configuracion', [SettingsController::class, 'update'])
         ->middleware('permission:admin.gestion.configuracion.manage')
         ->name('settings.update');
+    Route::post('configuracion/reset', [SettingsController::class, 'reset'])
+        ->middleware('permission:admin.gestion.configuracion.manage')
+        ->name('settings.reset');
 
     Route::get('facultades', [FacultyController::class, 'index'])
         ->middleware('permission:admin.gestion.facultades.manage')
@@ -120,16 +125,32 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'permission:admin.pa
     Route::post('artifacts/{artifact}/retry', [ReservationArtifactController::class, 'retry'])
         ->middleware('permission:admin.reservas.reintentos.retry')
         ->name('artifacts.retry');
+
+    Route::middleware(['role:admin'])->group(function () {
+        Route::get('usuarios', [UserManagementController::class, 'index'])
+            ->name('users.index');
+        Route::put('usuarios/{user}/roles', [UserManagementController::class, 'updateRoles'])
+            ->name('users.roles.update');
+        Route::put('usuarios/{user}/estado', [UserManagementController::class, 'toggleStatus'])
+            ->name('users.status.update');
+        Route::post('usuarios/{user}/password-reset', [UserManagementController::class, 'sendPasswordReset'])
+            ->name('users.password-reset.store');
+        Route::post('usuarios/{user}/email-verification', [UserManagementController::class, 'sendEmailVerification'])
+            ->name('users.email-verification.store');
+
+        Route::get('roles-permisos', [RolesPermissionsController::class, 'index'])
+            ->name('roles-permissions.index');
+    });
 });
 
 Route::prefix('api')->name('api.')->group(function () {
     Route::get('public/availability', PublicAvailabilityController::class)->name('public.availability');
 
-    Route::middleware(['auth'])->group(function () {
+    Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('student/reservations', StudentReservationsController::class)->name('student.reservations');
     });
 
-    Route::middleware(['auth', 'permission:admin.panel.access'])->group(function () {
+    Route::middleware(['auth', 'verified', 'permission:admin.panel.access'])->group(function () {
         Route::get('admin/requests', AdminRequestsController::class)
             ->middleware('permission:admin.reservas.solicitudes.view')
             ->name('admin.requests');

@@ -1,6 +1,5 @@
 <?php
 
-use App\Actions\Settings\SettingsDefaults;
 use App\Jobs\GenerateReservationPdf;
 use App\Models\AuditEvent;
 use App\Models\Enums\ReservationArtifactKind;
@@ -8,13 +7,14 @@ use App\Models\Reservation;
 use App\Models\ReservationArtifact;
 use App\Models\Setting;
 use App\Models\User;
+use App\Settings\SettingsSchema;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('admin settings updates are audited with changed keys', function () {
     $admin = User::factory()->admin()->create();
 
-    $payload = SettingsDefaults::values();
+    $payload = SettingsSchema::defaults();
     $payload['timezone'] = 'UTC';
 
     $response = $this->actingAs($admin)
@@ -40,7 +40,7 @@ test('admin settings updates are audited with changed keys', function () {
 test('admin settings update validation rejects invalid values', function () {
     $admin = User::factory()->admin()->create();
 
-    $payload = SettingsDefaults::values();
+    $payload = SettingsSchema::defaults();
     $payload['lead_time_max_days'] = 0;
 
     $this->actingAs($admin)
@@ -49,6 +49,28 @@ test('admin settings update validation rejects invalid values', function () {
         ->assertJsonValidationErrors(['lead_time_max_days']);
 
     expect(AuditEvent::query()->where('event_type', 'settings.updated')->exists())->toBeFalse();
+});
+
+test('admin can reset settings to defaults and it is audited', function () {
+    $admin = User::factory()->admin()->create();
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'timezone'],
+        ['value' => 'UTC', 'updated_by' => $admin->id],
+    );
+
+    $this->actingAs($admin)
+        ->post(route('admin.settings.reset'))
+        ->assertRedirect();
+
+    $stored = Setting::query()->find('timezone');
+    expect($stored?->value)->toBe(SettingsSchema::defaults()['timezone']);
+
+    expect(AuditEvent::query()
+        ->where('event_type', 'settings.reset_to_defaults')
+        ->where('actor_id', $admin->id)
+        ->exists()
+    )->toBeTrue();
 });
 
 test('audit page renders without data props', function () {

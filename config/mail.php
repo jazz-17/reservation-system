@@ -18,6 +18,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Outbound Mail Delivery Toggle
+    |--------------------------------------------------------------------------
+    |
+    | When disabled, all outbound emails will be suppressed (mails and mail
+    | notifications) by an application-level gate. This is intended to be the
+    | single toggle for disabling delivery.
+    |
+    */
+
+    'delivery_enabled' => env('MAIL_DELIVERY_ENABLED'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Mailer Configurations
     |--------------------------------------------------------------------------
     |

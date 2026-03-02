@@ -33,7 +33,7 @@ test('student can download pdf for their approved reservation (stored artifact)'
         'reservation_id' => $reservation->id,
         'kind' => ReservationArtifactKind::Pdf,
         'status' => ReservationArtifactStatus::Sent,
-        'payload' => ['path' => $path, 'template' => 'default'],
+        'payload' => ['path' => $path],
     ]);
 
     Pdf::shouldReceive('loadView')->never();
@@ -87,7 +87,7 @@ test('auditor can download another student reservation pdf', function () {
         'reservation_id' => $reservation->id,
         'kind' => ReservationArtifactKind::Pdf,
         'status' => ReservationArtifactStatus::Sent,
-        'payload' => ['path' => $path, 'template' => 'default'],
+        'payload' => ['path' => $path],
     ]);
 
     Pdf::shouldReceive('loadView')->never();

@@ -1,7 +1,6 @@
 @php
-    /** @var \App\Mail\ReservationStatusMail $message */
-    $reservation = $reservation ?? $message->reservation;
-    $timezone = $timezone ?? $message->timezone;
+    $event = $event ?? 'updated';
+    $timezone = $timezone ?? 'UTC';
 
     $startsAt = \Carbon\CarbonImmutable::parse($reservation->starts_at)->setTimezone($timezone);
     $endsAt = \Carbon\CarbonImmutable::parse($reservation->ends_at)->setTimezone($timezone);
@@ -9,13 +8,13 @@
 
 <p>Hola,</p>
 
-@if ($message->event === 'approved')
+@if ($event === 'approved')
     <p>Tu reserva fue <strong>aprobada</strong>.</p>
-@elseif ($message->event === 'rejected')
+@elseif ($event === 'rejected')
     <p>Tu reserva fue <strong>rechazada</strong>.</p>
-@elseif ($message->event === 'cancelled')
+@elseif ($event === 'cancelled')
     <p>Tu reserva fue <strong>cancelada</strong>.</p>
-@elseif ($message->event === 'expired')
+@elseif ($event === 'expired')
     <p>Tu solicitud de reserva <strong>expiró</strong> por falta de aprobación.</p>
 @else
     <p>Hay una actualización en tu reserva.</p>

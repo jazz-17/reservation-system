@@ -44,7 +44,6 @@ class GenerateReservationPdf implements ShouldQueue
 
         try {
             $timezone = $settings->getString('timezone');
-            $template = (string) ($artifact->payload['template'] ?? 'default');
 
             $reservation = $artifact->reservation;
             if ($reservation === null) {
@@ -56,7 +55,6 @@ class GenerateReservationPdf implements ShouldQueue
             $pdf = Pdf::loadView('pdfs.reservation.default', [
                 'reservation' => $reservation,
                 'timezone' => $timezone,
-                'template' => $template,
             ]);
 
             Storage::disk('local')->put($path, $pdf->output());
@@ -65,7 +63,6 @@ class GenerateReservationPdf implements ShouldQueue
                 'status' => ReservationArtifactStatus::Sent,
                 'payload' => array_merge($artifact->payload ?? [], [
                     'path' => $path,
-                    'template' => $template,
                 ]),
             ])->save();
         } catch (Throwable $exception) {

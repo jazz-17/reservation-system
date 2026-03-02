@@ -2,11 +2,12 @@
 
 namespace App\Jobs;
 
+use App\Actions\Settings\SettingsService;
+use App\Mail\MailDeliveryState;
 use App\Mail\ReservationStatusMail;
 use App\Models\Enums\ReservationArtifactKind;
 use App\Models\Enums\ReservationArtifactStatus;
 use App\Models\ReservationArtifact;
-use App\Actions\Settings\SettingsService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
@@ -74,6 +75,8 @@ class SendReservationEmail implements ShouldQueue
                 }
             }
 
+            MailDeliveryState::reset();
+
             Mail::to($to)
                 ->cc($cc)
                 ->bcc($bcc)
@@ -83,6 +86,14 @@ class SendReservationEmail implements ShouldQueue
                     timezone: $settings->getString('timezone'),
                     attachmentPath: $attachmentPath,
                 ));
+
+            if (MailDeliveryState::wasSuppressed()) {
+                $artifact->forceFill([
+                    'status' => ReservationArtifactStatus::Skipped,
+                ])->save();
+
+                return;
+            }
 
             $artifact->forceFill([
                 'status' => ReservationArtifactStatus::Sent,

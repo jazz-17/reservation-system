@@ -4,12 +4,17 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Http\Responses\Fortify\RegisterResponse;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 
@@ -20,7 +25,7 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(RegisterResponseContract::class, RegisterResponse::class);
     }
 
     /**
@@ -40,6 +45,35 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
+
+        Fortify::authenticateUsing(function (Request $request): ?User {
+            $request->validate([
+                Fortify::username() => ['required', 'string', 'email'],
+                'password' => ['required', 'string'],
+            ]);
+
+            $email = Str::lower((string) $request->input(Fortify::username()));
+
+            $user = User::query()
+                ->where('email', $email)
+                ->first();
+
+            if (! $user instanceof User) {
+                return null;
+            }
+
+            if (! Hash::check((string) $request->input('password'), (string) $user->password)) {
+                return null;
+            }
+
+            if ($user->isDisabled()) {
+                throw ValidationException::withMessages([
+                    Fortify::username() => 'Tu cuenta está desactivada. Contacta al administrador.',
+                ]);
+            }
+
+            return $user;
+        });
     }
 
     /**

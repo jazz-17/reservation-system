@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Actions\Settings\SettingsDefaults;
 use App\Models\Setting;
+use App\Settings\SettingsSchema;
 use Illuminate\Database\Seeder;
 
 class SettingsSeeder extends Seeder
@@ -13,7 +13,7 @@ class SettingsSeeder extends Seeder
      */
     public function run(): void
     {
-        foreach (SettingsDefaults::values() as $key => $value) {
+        foreach (SettingsSchema::defaults() as $key => $value) {
             Setting::query()->updateOrCreate(
                 ['key' => $key],
                 ['value' => $value, 'updated_by' => null],

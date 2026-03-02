@@ -198,9 +198,7 @@ class ReservationService
             [
                 'status' => ReservationArtifactStatus::Pending,
                 'attempts' => 0,
-                'payload' => [
-                    'template' => $this->settings->getString('pdf_template'),
-                ],
+                'payload' => [],
             ],
         );
 
@@ -211,10 +209,6 @@ class ReservationService
 
     private function enqueueEmails(Reservation $reservation, string $event): void
     {
-        if (! $this->settings->getBool('email_notifications_enabled')) {
-            return;
-        }
-
         $notifyAdmin = $this->settings->get('notify_admin_emails');
         $adminRecipients = is_array($notifyAdmin) ? $notifyAdmin : ['to' => []];
 
@@ -243,11 +237,6 @@ class ReservationService
             DB::afterCommit(function () use ($adminArtifact): void {
                 SendReservationEmail::dispatch($adminArtifact->id);
             });
-        }
-
-        $shouldNotifyStudent = $this->settings->getBool('notify_student_on_approval');
-        if (! $shouldNotifyStudent) {
-            return;
         }
 
         $reservation->loadMissing('user');

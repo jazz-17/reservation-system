@@ -1,9 +1,9 @@
 <?php
 
-use App\Actions\Settings\SettingsDefaults;
 use App\Models\AuditEvent;
 use App\Models\Reservation;
 use App\Models\User;
+use App\Settings\SettingsSchema;
 use Carbon\CarbonImmutable;
 
 test('unauthenticated user cannot access audit api', function () {
@@ -70,7 +70,7 @@ test('audit api filters by event type', function () {
 test('audit api filters by date range', function () {
     $admin = User::factory()->admin()->create();
 
-    $timezone = SettingsDefaults::values()['timezone'];
+    $timezone = SettingsSchema::defaults()['timezone'];
 
     $includedCreatedAt = CarbonImmutable::parse('2026-02-10 10:00', $timezone)->setTimezone('UTC');
     $excludedCreatedAt = CarbonImmutable::parse('2026-02-11 10:00', $timezone)->setTimezone('UTC');

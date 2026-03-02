@@ -4,6 +4,7 @@ namespace App\Mail\Transports;
 
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\Mailer\Exception\TransportException;
 use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mailer\Transport\AbstractTransport;
@@ -112,6 +113,8 @@ class Smtp2GoTransport extends AbstractTransport
             $payload['inlines'] = $inlines;
         }
 
+        $this->logRequest($url, $payload);
+
         try {
             $response = $this->http
                 ->acceptJson()
@@ -122,6 +125,15 @@ class Smtp2GoTransport extends AbstractTransport
                 ])
                 ->post($url, $payload);
         } catch (Throwable $exception) {
+            $this->logError(
+                message: 'smtp2go.exception',
+                context: [
+                    'url' => $url,
+                    'exception' => get_class($exception),
+                    'error' => $exception->getMessage(),
+                ],
+            );
+
             throw new TransportException(
                 message: 'SMTP2GO request failed: '.$exception->getMessage(),
                 code: 0,
@@ -136,6 +148,17 @@ class Smtp2GoTransport extends AbstractTransport
                 ? (Arr::get($body, 'data.error') ?? Arr::get($body, 'message') ?? $response->body())
                 : $response->body();
 
+            $this->logError(
+                message: 'smtp2go.http_error',
+                context: [
+                    'url' => $url,
+                    'status' => $response->status(),
+                    'request_id' => is_array($body) ? Arr::get($body, 'request_id') : null,
+                    'error' => is_string($error) ? $error : json_encode($error),
+                    'body' => config('services.smtp2go.log_response', true) ? $this->stringifyBody($body, $response->body()) : null,
+                ],
+            );
+
             throw new TransportException(sprintf(
                 'SMTP2GO request failed (HTTP %s): %s',
                 $response->status(),
@@ -146,8 +169,20 @@ class Smtp2GoTransport extends AbstractTransport
         $json = $response->json();
         $failed = is_array($json) ? (int) Arr::get($json, 'data.failed', 0) : 0;
 
+        $this->logResponse($url, $response->status(), $json);
+
         if ($failed > 0) {
             $failures = is_array($json) ? Arr::get($json, 'data.failures', []) : [];
+
+            $this->logError(
+                message: 'smtp2go.failed_recipients',
+                context: [
+                    'url' => $url,
+                    'request_id' => is_array($json) ? Arr::get($json, 'request_id') : null,
+                    'failed' => $failed,
+                    'failures' => $failures,
+                ],
+            );
 
             throw new TransportException(sprintf(
                 'SMTP2GO reported %d failed recipients: %s',
@@ -202,5 +237,156 @@ class Smtp2GoTransport extends AbstractTransport
         }
 
         return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function logRequest(string $url, array $payload): void
+    {
+        if (! $this->smtp2goLoggingEnabled()) {
+            return;
+        }
+
+        $context = [
+            'url' => $url,
+            'timeout_seconds' => $this->timeoutSeconds,
+            'fastaccept' => $this->fastaccept,
+            'sender' => $payload['sender'] ?? null,
+            'subject' => $payload['subject'] ?? null,
+            'to_count' => isset($payload['to']) && is_array($payload['to']) ? count($payload['to']) : 0,
+            'cc_count' => isset($payload['cc']) && is_array($payload['cc']) ? count($payload['cc']) : 0,
+            'bcc_count' => isset($payload['bcc']) && is_array($payload['bcc']) ? count($payload['bcc']) : 0,
+            'has_html_body' => array_key_exists('html_body', $payload),
+            'has_text_body' => array_key_exists('text_body', $payload),
+            'attachments_count' => isset($payload['attachments']) && is_array($payload['attachments']) ? count($payload['attachments']) : 0,
+            'inlines_count' => isset($payload['inlines']) && is_array($payload['inlines']) ? count($payload['inlines']) : 0,
+        ];
+
+        if (config('services.smtp2go.log_payload', false)) {
+            $context['recipients'] = [
+                'to' => $payload['to'] ?? [],
+                'cc' => $payload['cc'] ?? [],
+                'bcc' => $payload['bcc'] ?? [],
+            ];
+
+            $context['attachments'] = $this->redactAttachmentBlobs(is_array($payload['attachments'] ?? null) ? $payload['attachments'] : []);
+            $context['inlines'] = $this->redactAttachmentBlobs(is_array($payload['inlines'] ?? null) ? $payload['inlines'] : []);
+        }
+
+        $this->log(config('services.smtp2go.log_level', 'debug'), 'smtp2go.request', $context);
+    }
+
+    private function logResponse(string $url, int $status, mixed $body): void
+    {
+        if (! $this->smtp2goLoggingEnabled()) {
+            return;
+        }
+
+        $context = [
+            'url' => $url,
+            'status' => $status,
+            'request_id' => is_array($body) ? Arr::get($body, 'request_id') : null,
+            'email_id' => is_array($body) ? Arr::get($body, 'data.email_id') : null,
+            'succeeded' => is_array($body) ? Arr::get($body, 'data.succeeded') : null,
+            'failed' => is_array($body) ? Arr::get($body, 'data.failed') : null,
+        ];
+
+        if (config('services.smtp2go.log_response', true)) {
+            $context['body'] = $this->stringifyBody($body, null);
+        }
+
+        $this->log(config('services.smtp2go.log_level', 'debug'), 'smtp2go.response', $context);
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function logError(string $message, array $context = []): void
+    {
+        if (! $this->smtp2goLoggingEnabled()) {
+            return;
+        }
+
+        $this->log('error', $message, $context);
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function log(string $level, string $message, array $context = []): void
+    {
+        $channel = (string) config('services.smtp2go.log_channel', 'smtp2go');
+
+        Log::channel($channel)->log($this->normalizeLogLevel($level), $message, $context);
+    }
+
+    private function smtp2goLoggingEnabled(): bool
+    {
+        return (bool) config('services.smtp2go.log', false);
+    }
+
+    private function normalizeLogLevel(string $level): string
+    {
+        $level = strtolower(trim($level));
+
+        return in_array($level, [
+            'debug',
+            'info',
+            'notice',
+            'warning',
+            'error',
+            'critical',
+            'alert',
+            'emergency',
+        ], true) ? $level : 'debug';
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $items
+     * @return array<int, array<string, mixed>>
+     */
+    private function redactAttachmentBlobs(array $items): array
+    {
+        $redacted = [];
+
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $copy = $item;
+            if (array_key_exists('fileblob', $copy)) {
+                $copy['fileblob'] = '[base64 redacted]';
+            }
+
+            $redacted[] = $copy;
+        }
+
+        return $redacted;
+    }
+
+    private function stringifyBody(mixed $json, ?string $rawBody): ?string
+    {
+        if (is_array($json)) {
+            $encoded = json_encode($json);
+
+            return is_string($encoded) ? $this->truncate($encoded) : null;
+        }
+
+        if (is_string($rawBody)) {
+            return $this->truncate($rawBody);
+        }
+
+        return null;
+    }
+
+    private function truncate(string $value, int $max = 2000): string
+    {
+        if (strlen($value) <= $max) {
+            return $value;
+        }
+
+        return substr($value, 0, $max).'…';
     }
 }

@@ -73,6 +73,13 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'smtp2go' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/smtp2go.log'),
+            'level' => env('SMTP2GO_LOG_LEVEL', env('LOG_LEVEL', 'debug')),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

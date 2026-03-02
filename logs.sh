@@ -14,11 +14,19 @@ LINES="${2:-50}"
 case "${1:-laravel}" in
   laravel|"")
     echo "=== Laravel log (last $LINES lines, following) ==="
-    $DC exec app tail -n "$LINES" -f storage/logs/laravel.log
+    LOG_FILE="$($DC exec -T app sh -lc 'ls -1t storage/logs/laravel-*.log 2>/dev/null | head -n 1')"
+    LOG_FILE="${LOG_FILE:-storage/logs/laravel.log}"
+    $DC exec app tail -n "$LINES" -f "$LOG_FILE"
     ;;
   -n)
     echo "=== Laravel log (last $LINES lines, following) ==="
-    $DC exec app tail -n "$LINES" -f storage/logs/laravel.log
+    LOG_FILE="$($DC exec -T app sh -lc 'ls -1t storage/logs/laravel-*.log 2>/dev/null | head -n 1')"
+    LOG_FILE="${LOG_FILE:-storage/logs/laravel.log}"
+    $DC exec app tail -n "$LINES" -f "$LOG_FILE"
+    ;;
+  smtp2go)
+    echo "=== SMTP2GO log (last $LINES lines, following) ==="
+    $DC exec app tail -n "$LINES" -f storage/logs/smtp2go.log
     ;;
   docker)
     echo "=== Docker container logs ==="

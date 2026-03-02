@@ -61,7 +61,7 @@ test('registration succeeds when email is in allow-list', function () {
         'password_confirmation' => 'Password123!',
     ]);
 
-    $response->assertRedirect('/dashboard');
+    $response->assertRedirect(route('verification.notice', absolute: false));
     $this->assertAuthenticated();
 
     expect(User::query()->where('email', $email)->exists())->toBeTrue();
@@ -259,17 +259,10 @@ test('admins cannot approve a reservation if its duration is invalid at approval
 test('approving a reservation enqueues pdf and email artifacts', function () {
     Queue::fake();
 
-    Setting::query()->create([
-        'key' => 'email_notifications_enabled',
-        'value' => true,
-        'updated_by' => null,
-    ]);
-
-    Setting::query()->create([
-        'key' => 'notify_admin_emails',
-        'value' => ['to' => ['admin.notify@example.edu'], 'cc' => [], 'bcc' => []],
-        'updated_by' => null,
-    ]);
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_admin_emails'],
+        ['value' => ['to' => ['admin.notify@example.edu'], 'cc' => [], 'bcc' => []], 'updated_by' => null],
+    );
 
     $admin = User::factory()->admin()->create();
     $user = User::factory()->create();
@@ -336,7 +329,7 @@ test('students can cancel a pending reservation', function () {
 
     expect(AuditEvent::query()->where('event_type', 'reservation.cancelled')->where('subject_id', $reservation->id)->exists())->toBeTrue();
 
-    Queue::assertNotPushed(SendReservationEmail::class);
+    Queue::assertPushedTimes(SendReservationEmail::class, 1);
 });
 
 test('cancellation cutoff is enforced', function () {
@@ -386,7 +379,7 @@ test('approved reservations can be cancelled by the student', function () {
 
     expect(AuditEvent::query()->where('event_type', 'reservation.cancelled')->where('subject_id', $reservation->id)->exists())->toBeTrue();
 
-    Queue::assertNotPushed(SendReservationEmail::class);
+    Queue::assertPushedTimes(SendReservationEmail::class, 1);
 });
 
 test('students cannot cancel another student reservation', function () {
@@ -412,17 +405,10 @@ test('students cannot cancel another student reservation', function () {
 test('admins can reject a pending reservation end-to-end', function () {
     Queue::fake();
 
-    Setting::query()->create([
-        'key' => 'email_notifications_enabled',
-        'value' => true,
-        'updated_by' => null,
-    ]);
-
-    Setting::query()->create([
-        'key' => 'notify_admin_emails',
-        'value' => ['to' => ['admin.notify@example.edu'], 'cc' => [], 'bcc' => []],
-        'updated_by' => null,
-    ]);
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_admin_emails'],
+        ['value' => ['to' => ['admin.notify@example.edu'], 'cc' => [], 'bcc' => []], 'updated_by' => null],
+    );
 
     $admin = User::factory()->admin()->create();
     $student = User::factory()->create();
@@ -559,7 +545,7 @@ test('pdf generation job stores the pdf and marks the artifact as sent', functio
         'reservation_id' => $reservation->id,
         'kind' => ReservationArtifactKind::Pdf,
         'status' => ReservationArtifactStatus::Pending,
-        'payload' => ['template' => 'default'],
+        'payload' => [],
     ]);
 
     (new GenerateReservationPdf($artifact->id))->handle(app(\App\Actions\Settings\SettingsService::class));
@@ -585,7 +571,7 @@ test('email sending job sends the mailable and marks the artifact as sent', func
         'reservation_id' => $reservation->id,
         'kind' => ReservationArtifactKind::Pdf,
         'status' => ReservationArtifactStatus::Sent,
-        'payload' => ['path' => $pdfPath, 'template' => 'default'],
+        'payload' => ['path' => $pdfPath],
     ]);
 
     $artifact = ReservationArtifact::factory()->create([

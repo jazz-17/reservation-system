@@ -9,6 +9,8 @@ import {
     Shield,
     Ban,
     BookOpen,
+    Users,
+    KeyRound,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -33,12 +35,23 @@ import adminHistoryRoutes from '@/routes/admin/history';
 import adminRequestsRoutes from '@/routes/admin/requests';
 import adminSchoolsRoutes from '@/routes/admin/schools';
 import adminSettingsRoutes from '@/routes/admin/settings';
+import adminUsersRoutes from '@/routes/admin/users';
+import adminRolesPermissionsRoutes from '@/routes/admin/roles-permissions';
 import calendarRoutes from '@/routes/calendar';
 import reservationsRoutes from '@/routes/reservations';
 import { type NavItem } from '@/types';
 import AppLogo from './AppLogo.vue';
 
 const page = usePage();
+
+const roles = computed(() => {
+    const user = page.props.auth?.user;
+    if (!user) {
+        return [];
+    }
+
+    return Array.isArray(user.roles) ? user.roles : [];
+});
 
 const permissions = computed(() => {
     const user = page.props.auth?.user;
@@ -143,6 +156,31 @@ const supervisionNavItems = computed<NavItem[]>(() =>
 );
 
 const canAccessAdmin = computed(() => hasPermission('admin.panel.access'));
+const isAdmin = computed(() => roles.value.includes('admin'));
+
+const adminOnlyGestionNavItems = computed<NavItem[]>(() => {
+    if (!isAdmin.value) {
+        return [];
+    }
+
+    return [
+        {
+            title: 'Usuarios',
+            href: adminUsersRoutes.index(),
+            icon: Users,
+        },
+        {
+            title: 'Roles y permisos',
+            href: adminRolesPermissionsRoutes.index(),
+            icon: KeyRound,
+        },
+    ];
+});
+
+const gestionAllNavItems = computed<NavItem[]>(() => [
+    ...gestionNavItems.value,
+    ...adminOnlyGestionNavItems.value,
+]);
 
 const mainNavItems: NavItem[] = [
     {
@@ -190,8 +228,8 @@ const mainNavItems: NavItem[] = [
                 label="Reservas"
             />
             <NavMain
-                v-if="canAccessAdmin && gestionNavItems.length > 0"
-                :items="gestionNavItems"
+                v-if="canAccessAdmin && gestionAllNavItems.length > 0"
+                :items="gestionAllNavItems"
                 label="Gestión"
             />
             <NavMain

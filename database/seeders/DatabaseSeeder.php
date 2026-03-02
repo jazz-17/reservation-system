@@ -51,6 +51,7 @@ class DatabaseSeeder extends Seeder
                 'professional_school_id' => null,
                 'base_year' => null,
                 'password' => Hash::make($adminPassword),
+                'email_verified_at' => now(),
             ],
         );
 

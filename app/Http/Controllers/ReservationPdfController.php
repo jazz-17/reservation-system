@@ -69,15 +69,12 @@ class ReservationPdfController extends Controller
     private function generateAndStore(Reservation $reservation, SettingsService $settings): string
     {
         $timezone = $settings->getString('timezone');
-        $template = $settings->getString('pdf_template');
-        $template = $template !== '' ? $template : 'default';
 
         $path = "reservations/{$reservation->id}/reservation.pdf";
 
         $pdf = Pdf::loadView('pdfs.reservation.default', [
             'reservation' => $reservation,
             'timezone' => $timezone,
-            'template' => $template,
         ]);
 
         Storage::disk('local')->put($path, $pdf->output());
@@ -93,7 +90,6 @@ class ReservationPdfController extends Controller
         $artifact->status = ReservationArtifactStatus::Sent;
         $artifact->payload = array_merge(is_array($artifact->payload) ? $artifact->payload : [], [
             'path' => $path,
-            'template' => $template,
         ]);
         $artifact->save();
 

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, router } from '@inertiajs/vue3';
 import { computed, reactive } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -50,8 +50,6 @@ const formState = reactive<AdminSettings>({
         bcc: props.settings.notify_admin_emails?.bcc ?? [],
     },
 });
-
-const emailsEnabled = computed(() => formState.email_notifications_enabled);
 
 const toTextarea = (values: string[]): string => values.join('\n');
 const fromTextarea = (value: string): string[] =>
@@ -154,6 +152,10 @@ const leadTimePreview = computed(() => {
         latest: dateFormatter.format(latest),
     };
 });
+
+const resetToDefaults = (): void => {
+    router.post(adminSettingsRoutes.reset().url);
+};
 </script>
 
 <template>
@@ -163,7 +165,21 @@ const leadTimePreview = computed(() => {
         <AdminPageHeader
             title="Configuración"
             subtitle="Ajusta reglas de reservas, horarios y notificaciones."
-        />
+        >
+            <ConfirmDialog
+                title="Restablecer configuración"
+                description="Esto sobrescribirá la configuración actual con los valores por defecto."
+                confirm-label="Restablecer"
+                variant="destructive"
+                @confirm="resetToDefaults"
+            >
+                <template #trigger>
+                    <Button type="button" variant="outline">
+                        Restablecer
+                    </Button>
+                </template>
+            </ConfirmDialog>
+        </AdminPageHeader>
 
         <Form
             v-bind="adminSettingsRoutes.update.form()"
@@ -185,6 +201,8 @@ const leadTimePreview = computed(() => {
                         />
                         <InputError :message="errors.timezone" />
                     </div>
+
+
                 </div>
             </div>
 
@@ -272,46 +290,8 @@ const leadTimePreview = computed(() => {
             </div>
 
             <div class="rounded-lg border border-border/60 p-4">
-                <div class="mb-3 text-sm font-medium">PDF</div>
-                <div class="grid gap-1 md:max-w-md">
-                    <Label for="pdf_template"
-                        >Plantilla activa</Label
-                    >
-                    <Input
-                        id="pdf_template"
-                        v-model="formState.pdf_template"
-                        placeholder="default"
-                    />
-                    <InputError :message="errors.pdf_template" />
-                </div>
-            </div>
-
-            <div class="rounded-lg border border-border/60 p-4">
                 <div class="mb-3 text-sm font-medium">Notificaciones</div>
                 <div class="grid gap-4 md:grid-cols-2">
-                    <div class="md:col-span-2">
-                        <div class="flex items-center gap-2">
-                            <Checkbox
-                                id="email_notifications_enabled"
-                                :checked="formState.email_notifications_enabled"
-                                @update:checked="formState.email_notifications_enabled = $event"
-                            />
-                            <Label for="email_notifications_enabled">
-                                Habilitar envío de correos
-                            </Label>
-                            <InputError
-                                :message="errors.email_notifications_enabled"
-                            />
-                        </div>
-                        <p
-                            v-if="!emailsEnabled"
-                            class="mt-2 text-xs text-muted-foreground"
-                        >
-                            El envío de correos está deshabilitado. Los eventos
-                            se registran en el sistema, pero no se enviarán
-                            emails.
-                        </p>
-                    </div>
                     <div class="grid gap-1">
                         <Label for="notify_to"
                             >Emails admin (TO)</Label
@@ -321,7 +301,6 @@ const leadTimePreview = computed(() => {
                             v-model="notifyTo"
                             rows="4"
                             placeholder="uno@ejemplo.com"
-                            :disabled="!emailsEnabled"
                         />
                         <InputError
                             :message="errors['notify_admin_emails.to']"
@@ -335,7 +314,6 @@ const leadTimePreview = computed(() => {
                             id="notify_cc"
                             v-model="notifyCc"
                             rows="4"
-                            :disabled="!emailsEnabled"
                         />
                         <InputError
                             :message="errors['notify_admin_emails.cc']"
@@ -349,24 +327,9 @@ const leadTimePreview = computed(() => {
                             id="notify_bcc"
                             v-model="notifyBcc"
                             rows="3"
-                            :disabled="!emailsEnabled"
                         />
                         <InputError
                             :message="errors['notify_admin_emails.bcc']"
-                        />
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <Checkbox
-                            id="notify_student_on_approval"
-                            :checked="formState.notify_student_on_approval"
-                            @update:checked="formState.notify_student_on_approval = $event"
-                            :disabled="!emailsEnabled"
-                        />
-                        <Label for="notify_student_on_approval">
-                            Notificar al estudiante (cambios de estado)
-                        </Label>
-                        <InputError
-                            :message="errors.notify_student_on_approval"
                         />
                     </div>
                 </div>
@@ -391,12 +354,6 @@ const leadTimePreview = computed(() => {
                         <div class="text-sm">
                             Desde {{ leadTimePreview.earliest }}<br />
                             Hasta {{ leadTimePreview.latest }}
-                        </div>
-                        <div class="mt-2 text-xs text-muted-foreground">
-                            Plantilla PDF
-                        </div>
-                        <div class="text-sm">
-                            {{ formState.pdf_template || '—' }}
                         </div>
                     </div>
 
