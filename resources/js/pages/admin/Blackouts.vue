@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
-import { formatDateTime } from '@/lib/formatters';
+import { APP_TIMEZONE, formatDateTime } from '@/lib/formatters';
 import adminBlackoutsRoutes from '@/routes/admin/blackouts';
 import adminRequestsRoutes from '@/routes/admin/requests';
 import type { Blackout, RecurringBlackout } from '@/types/admin';
@@ -189,12 +189,18 @@ const removeRecurring = (id: number): void => {
                 <div class="grid gap-1">
                     <Label for="starts_at">Inicio</Label>
                     <Input id="starts_at" name="starts_at" type="datetime-local" />
+                    <div class="text-xs text-muted-foreground">
+                        Hora en {{ APP_TIMEZONE }}.
+                    </div>
                     <InputError :message="errors.starts_at" />
                 </div>
 
                 <div class="grid gap-1">
                     <Label for="ends_at">Fin</Label>
                     <Input id="ends_at" name="ends_at" type="datetime-local" />
+                    <div class="text-xs text-muted-foreground">
+                        Hora en {{ APP_TIMEZONE }}.
+                    </div>
                     <InputError :message="errors.ends_at" />
                 </div>
 

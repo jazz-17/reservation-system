@@ -13,6 +13,7 @@ import AppCalendar from '@/components/AppCalendar.vue';
 import { Skeleton } from '@/components/ui/skeleton';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { fetchJson } from '@/lib/http';
+import { APP_TIMEZONE } from '@/lib/formatters';
 import publicApiRoutes from '@/routes/api/public';
 import reservationsRoutes from '@/routes/reservations';
 
@@ -24,10 +25,6 @@ type CalendarEvent = EventInput & {
     };
 };
 
-const props = defineProps<{
-    timezone: string;
-}>();
-
 const isLoading = ref(false);
 const loadError = ref(false);
 
@@ -35,7 +32,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     plugins: [dayGridPlugin, interactionPlugin],
     initialView: 'dayGridMonth',
     locale: esLocale,
-    timeZone: props.timezone,
+    timeZone: APP_TIMEZONE,
     height: 'auto',
     headerToolbar: {
         left: 'prev,next today',
@@ -120,7 +117,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
                 Bloqueado
             </div>
             <div class="ml-auto text-xs">
-                Zona horaria: {{ props.timezone }}
+                Zona horaria: {{ APP_TIMEZONE }}
             </div>
         </div>
 

@@ -17,6 +17,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
+import { APP_LOCALE, APP_TIMEZONE } from '@/lib/formatters';
 import adminRequestsRoutes from '@/routes/admin/requests';
 import adminSettingsRoutes from '@/routes/admin/settings';
 import type { AdminSettings, DayKey } from '@/types/admin';
@@ -132,7 +133,7 @@ const leadTimePreview = computed(() => {
     const latest = new Date(now.getTime() + maxDays * 24 * 60 * 60 * 1000);
 
     const dateTimeFormatter = new Intl.DateTimeFormat('es-PE', {
-        timeZone: formState.timezone,
+        timeZone: APP_TIMEZONE,
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -141,7 +142,7 @@ const leadTimePreview = computed(() => {
     });
 
     const dateFormatter = new Intl.DateTimeFormat('es-PE', {
-        timeZone: formState.timezone,
+        timeZone: APP_TIMEZONE,
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -190,16 +191,9 @@ const resetToDefaults = (): void => {
             <div class="rounded-lg border border-border/60 p-4">
                 <div class="mb-3 text-sm font-medium">General</div>
                 <div class="grid gap-4 md:grid-cols-1">
-                    <div class="grid gap-1">
-                        <Label for="timezone"
-                            >Zona horaria</Label
-                        >
-                        <Input
-                            id="timezone"
-                            v-model="formState.timezone"
-                            placeholder="America/Lima"
-                        />
-                        <InputError :message="errors.timezone" />
+                    <div class="text-sm text-muted-foreground">
+                        Zona horaria fija: <span class="font-medium text-foreground">{{ APP_TIMEZONE }}</span>.
+                        Idioma fijo: <span class="font-medium text-foreground">{{ APP_LOCALE }}</span>.
                     </div>
 
 

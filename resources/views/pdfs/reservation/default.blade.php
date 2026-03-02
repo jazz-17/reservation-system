@@ -1,9 +1,10 @@
 @php
     /** @var \App\Models\Reservation $reservation */
+    $timezone = (string) config('app.timezone', 'America/Lima');
     $user = $reservation->user;
     $school = $reservation->professionalSchool;
-    $startsAt = \Carbon\CarbonImmutable::parse($reservation->starts_at)->setTimezone($timezone);
-    $endsAt = \Carbon\CarbonImmutable::parse($reservation->ends_at)->setTimezone($timezone);
+    $startsAt = $reservation->starts_at->setTimezone($timezone);
+    $endsAt = $reservation->ends_at->setTimezone($timezone);
 
     // Spanish month names
     $months = [

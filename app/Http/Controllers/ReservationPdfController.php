@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Settings\SettingsService;
 use App\Models\Enums\ReservationArtifactKind;
 use App\Models\Enums\ReservationArtifactStatus;
 use App\Models\Enums\ReservationStatus;
 use App\Models\Reservation;
 use App\Models\ReservationArtifact;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -18,7 +18,7 @@ class ReservationPdfController extends Controller
     /**
      * Handle the incoming request.
      */
-    public function __invoke(Request $request, Reservation $reservation, SettingsService $settings): BinaryFileResponse
+    public function __invoke(Request $request, Reservation $reservation): BinaryFileResponse
     {
         if ($request->user() === null) {
             abort(401);
@@ -32,7 +32,7 @@ class ReservationPdfController extends Controller
 
         $path = $this->existingPdfPath($reservation);
         if ($path === null) {
-            $path = $this->generateAndStore($reservation, $settings);
+            $path = $this->generateAndStore($reservation);
         }
 
         $filename = "reserva-{$reservation->id}.pdf";
@@ -66,15 +66,12 @@ class ReservationPdfController extends Controller
         return $path;
     }
 
-    private function generateAndStore(Reservation $reservation, SettingsService $settings): string
+    private function generateAndStore(Reservation $reservation): string
     {
-        $timezone = $settings->getString('timezone');
-
         $path = "reservations/{$reservation->id}/reservation.pdf";
 
         $pdf = Pdf::loadView('pdfs.reservation.default', [
             'reservation' => $reservation,
-            'timezone' => $timezone,
         ]);
 
         Storage::disk('local')->put($path, $pdf->output());
@@ -85,7 +82,7 @@ class ReservationPdfController extends Controller
         ]);
 
         $artifact->attempts = ($artifact->attempts ?? 0) + 1;
-        $artifact->last_attempt_at = now();
+        $artifact->last_attempt_at = CarbonImmutable::now('UTC');
         $artifact->last_error = null;
         $artifact->status = ReservationArtifactStatus::Sent;
         $artifact->payload = array_merge(is_array($artifact->payload) ? $artifact->payload : [], [

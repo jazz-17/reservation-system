@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Actions\Settings\SettingsService;
 use App\Http\Controllers\Controller;
 use App\Models\Reservation;
 use Carbon\CarbonImmutable;
@@ -15,7 +14,7 @@ class AdminHistoryController extends Controller
     /**
      * Handle the incoming request.
      */
-    public function __invoke(Request $request, SettingsService $settings): JsonResponse
+    public function __invoke(Request $request): JsonResponse
     {
         if (! $request->user()?->can('admin.reservas.historial.view')) {
             abort(403);
@@ -27,7 +26,7 @@ class AdminHistoryController extends Controller
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
         ]);
 
-        $timezone = $settings->getString('timezone');
+        $timezone = (string) config('app.timezone', 'America/Lima');
 
         $query = Reservation::query()
             ->with([

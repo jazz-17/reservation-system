@@ -16,7 +16,6 @@ class SettingsSchema
     public static function defaults(): array
     {
         return [
-            'timezone' => 'America/Lima',
             'opening_hours' => [
                 'mon' => ['open' => '08:00', 'close' => '22:00'],
                 'tue' => ['open' => '08:00', 'close' => '22:00'],
@@ -88,7 +87,6 @@ class SettingsSchema
     public static function rules(): array
     {
         $rules = [
-            'timezone' => ['required', 'string', 'max:64'],
             'min_duration_minutes' => ['required', 'integer', 'min:1', 'max:720'],
             'max_duration_minutes' => ['required', 'integer', 'min:1', 'max:720'],
             'lead_time_min_hours' => ['required', 'integer', 'min:0', 'max:168'],

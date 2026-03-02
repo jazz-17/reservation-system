@@ -15,7 +15,7 @@ test('admin settings updates are audited with changed keys', function () {
     $admin = User::factory()->admin()->create();
 
     $payload = SettingsSchema::defaults();
-    $payload['timezone'] = 'UTC';
+    $payload['min_duration_minutes'] = $payload['min_duration_minutes'] + 1;
 
     $response = $this->actingAs($admin)
         ->putJson(route('admin.settings.update'), $payload)
@@ -23,9 +23,9 @@ test('admin settings updates are audited with changed keys', function () {
 
     $response->assertSessionHasNoErrors();
 
-    $stored = Setting::query()->find('timezone');
+    $stored = Setting::query()->find('min_duration_minutes');
     expect($stored)->not->toBeNull();
-    expect($stored?->value)->toBe('UTC');
+    expect($stored?->value)->toBe($payload['min_duration_minutes']);
 
     $event = AuditEvent::query()
         ->where('event_type', 'settings.updated')
@@ -34,7 +34,7 @@ test('admin settings updates are audited with changed keys', function () {
 
     expect($event)->not->toBeNull();
     expect($event?->actor_id)->toBe($admin->id);
-    expect($event?->metadata['changed_keys'] ?? [])->toContain('timezone');
+    expect($event?->metadata['changed_keys'] ?? [])->toContain('min_duration_minutes');
 });
 
 test('admin settings update validation rejects invalid values', function () {
@@ -55,16 +55,16 @@ test('admin can reset settings to defaults and it is audited', function () {
     $admin = User::factory()->admin()->create();
 
     Setting::query()->updateOrCreate(
-        ['key' => 'timezone'],
-        ['value' => 'UTC', 'updated_by' => $admin->id],
+        ['key' => 'min_duration_minutes'],
+        ['value' => 1, 'updated_by' => $admin->id],
     );
 
     $this->actingAs($admin)
         ->post(route('admin.settings.reset'))
         ->assertRedirect();
 
-    $stored = Setting::query()->find('timezone');
-    expect($stored?->value)->toBe(SettingsSchema::defaults()['timezone']);
+    $stored = Setting::query()->find('min_duration_minutes');
+    expect($stored?->value)->toBe(SettingsSchema::defaults()['min_duration_minutes']);
 
     expect(AuditEvent::query()
         ->where('event_type', 'settings.reset_to_defaults')

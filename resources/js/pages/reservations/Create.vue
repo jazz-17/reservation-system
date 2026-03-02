@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { fetchJson } from '@/lib/http';
+import { APP_TIMEZONE, formatYmdInTimeZone } from '@/lib/formatters';
 import publicApiRoutes from '@/routes/api/public';
 import reservationsRoutes from '@/routes/reservations';
 
@@ -30,7 +31,6 @@ type CalendarEvent = EventInput & {
 };
 
 const props = defineProps<{
-    timezone: string;
     opening_hours: OpeningHours | null;
     min_duration_minutes: number;
     max_duration_minutes: number;
@@ -54,13 +54,7 @@ const dateFromQuery = computed((): string | null => {
     return value;
 });
 
-const toDateInput = (date: Date): string =>
-    new Intl.DateTimeFormat('en-CA', {
-        timeZone: props.timezone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-    }).format(date);
+const toDateInput = (date: Date): string => formatYmdInTimeZone(date);
 
 const selectedDate = ref<string>(
     dateFromQuery.value ?? toDateInput(new Date()),
@@ -167,10 +161,87 @@ const overlap = computed(
             return null;
         }
 
-        const userStart = new Date(`${startsAtValue.value}`);
-        const userEnd = new Date(`${endsAtValue.value}`);
+        const partsInTimeZone = (
+            date: Date,
+            timeZone: string,
+        ): {
+            year: number;
+            month: number;
+            day: number;
+            hour: number;
+            minute: number;
+            second: number;
+        } => {
+            const parts = new Intl.DateTimeFormat('en', {
+                timeZone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+            }).formatToParts(date);
 
-        if (isNaN(userStart.getTime()) || isNaN(userEnd.getTime())) {
+            const year = Number(parts.find((p) => p.type === 'year')?.value);
+            const month = Number(parts.find((p) => p.type === 'month')?.value);
+            const day = Number(parts.find((p) => p.type === 'day')?.value);
+            const hour = Number(parts.find((p) => p.type === 'hour')?.value);
+            const minute = Number(parts.find((p) => p.type === 'minute')?.value);
+            const second = Number(parts.find((p) => p.type === 'second')?.value);
+
+            return { year, month, day, hour, minute, second };
+        };
+
+        const offsetMsForUtc = (utcMs: number, timeZone: string): number => {
+            const parts = partsInTimeZone(new Date(utcMs), timeZone);
+            const asUtcMs = Date.UTC(
+                parts.year,
+                parts.month - 1,
+                parts.day,
+                parts.hour,
+                parts.minute,
+                parts.second,
+            );
+
+            return utcMs - asUtcMs;
+        };
+
+        const makeDateInTimeZone = (
+            ymd: string,
+            hm: string,
+            timeZone: string,
+        ): Date | null => {
+            const dateMatch = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            const timeMatch = hm.match(/^(\d{2}):(\d{2})$/);
+
+            if (!dateMatch || !timeMatch) {
+                return null;
+            }
+
+            const year = Number(dateMatch[1]);
+            const month = Number(dateMatch[2]);
+            const day = Number(dateMatch[3]);
+            const hour = Number(timeMatch[1]);
+            const minute = Number(timeMatch[2]);
+
+            const baseUtcMs = Date.UTC(year, month - 1, day, hour, minute, 0);
+
+            const offset1 = offsetMsForUtc(baseUtcMs, timeZone);
+            const offset2 = offsetMsForUtc(baseUtcMs + offset1, timeZone);
+
+            return new Date(baseUtcMs + offset2);
+        };
+
+        const userStart = makeDateInTimeZone(selectedDate.value, startTime.value, APP_TIMEZONE);
+        const userEnd = makeDateInTimeZone(selectedDate.value, endTime.value, APP_TIMEZONE);
+
+        if (
+            userStart === null ||
+            userEnd === null ||
+            isNaN(userStart.getTime()) ||
+            isNaN(userEnd.getTime())
+        ) {
             return null;
         }
 
@@ -250,7 +321,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     plugins: [timeGridPlugin, interactionPlugin],
     initialView: 'timeGridDay',
     locale: esLocale,
-    timeZone: props.timezone,
+    timeZone: APP_TIMEZONE,
     initialDate: initialCalendarDate,
     height: 560,
     nowIndicator: true,
@@ -307,7 +378,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
             return;
         }
 
-        const nextDate = info.start.toISOString().slice(0, 10);
+        const nextDate = formatYmdInTimeZone(info.start);
         if (nextDate !== selectedDate.value) {
             isSyncingFromCalendar.value = true;
             selectedDate.value = nextDate;
@@ -375,7 +446,7 @@ watch(selectedDate, (date) => {
                         Bloqueado
                     </div>
                     <div class="ml-auto text-xs">
-                        Zona horaria: {{ props.timezone }}
+                        Zona horaria: {{ APP_TIMEZONE }}
                     </div>
                 </div>
 

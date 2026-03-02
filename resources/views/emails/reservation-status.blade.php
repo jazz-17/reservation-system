@@ -1,9 +1,9 @@
 @php
     $event = $event ?? 'updated';
-    $timezone = $timezone ?? 'UTC';
+    $timezone = (string) config('app.timezone', 'America/Lima');
 
-    $startsAt = \Carbon\CarbonImmutable::parse($reservation->starts_at)->setTimezone($timezone);
-    $endsAt = \Carbon\CarbonImmutable::parse($reservation->ends_at)->setTimezone($timezone);
+    $startsAt = $reservation->starts_at->setTimezone($timezone);
+    $endsAt = $reservation->ends_at->setTimezone($timezone);
 @endphp
 
 <p>Hola,</p>

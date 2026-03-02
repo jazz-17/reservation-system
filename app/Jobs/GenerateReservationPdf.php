@@ -2,11 +2,11 @@
 
 namespace App\Jobs;
 
-use App\Actions\Settings\SettingsService;
 use App\Models\Enums\ReservationArtifactKind;
 use App\Models\Enums\ReservationArtifactStatus;
 use App\Models\ReservationArtifact;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Storage;
@@ -25,7 +25,7 @@ class GenerateReservationPdf implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(SettingsService $settings): void
+    public function handle(): void
     {
         $artifact = ReservationArtifact::query()
             ->with(['reservation.user', 'reservation.professionalSchool'])
@@ -38,13 +38,11 @@ class GenerateReservationPdf implements ShouldQueue
         $artifact->forceFill([
             'status' => ReservationArtifactStatus::Pending,
             'attempts' => $artifact->attempts + 1,
-            'last_attempt_at' => now(),
+            'last_attempt_at' => CarbonImmutable::now('UTC'),
             'last_error' => null,
         ])->save();
 
         try {
-            $timezone = $settings->getString('timezone');
-
             $reservation = $artifact->reservation;
             if ($reservation === null) {
                 throw new \RuntimeException('Reservation not found.');
@@ -54,7 +52,6 @@ class GenerateReservationPdf implements ShouldQueue
 
             $pdf = Pdf::loadView('pdfs.reservation.default', [
                 'reservation' => $reservation,
-                'timezone' => $timezone,
             ]);
 
             Storage::disk('local')->put($path, $pdf->output());

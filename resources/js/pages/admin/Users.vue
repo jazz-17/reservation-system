@@ -29,6 +29,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
+import { formatDate } from '@/lib/formatters';
 import adminUsersRoutes from '@/routes/admin/users';
 import adminRequestsRoutes from '@/routes/admin/requests';
 import type { ManagedUser } from '@/types/admin';
@@ -179,7 +180,7 @@ const resendVerification = (user: ManagedUser): void => {
                                 {{ u.email }}
                             </div>
                             <div v-if="u.created_at" class="text-xs text-muted-foreground">
-                                Creado: {{ new Date(u.created_at).toLocaleDateString('es-PE') }}
+                                Creado: {{ formatDate(u.created_at) }}
                             </div>
                         </div>
                     </TableCell>
@@ -372,4 +373,3 @@ const resendVerification = (user: ManagedUser): void => {
         </div>
     </div>
 </template>
-

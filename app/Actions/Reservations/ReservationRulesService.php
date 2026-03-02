@@ -27,7 +27,7 @@ class ReservationRulesService
             ]);
         }
 
-        $timezone = $this->settings->getString('timezone');
+        $timezone = $this->timezone();
 
         $startsAtLocal = $startsAtUtc->setTimezone($timezone);
         $endsAtLocal = $endsAtUtc->setTimezone($timezone);
@@ -44,7 +44,7 @@ class ReservationRulesService
 
     public function validateForApproval(Reservation $reservation): void
     {
-        $timezone = $this->settings->getString('timezone');
+        $timezone = $this->timezone();
 
         $startsAtUtc = CarbonImmutable::parse($reservation->starts_at)->setTimezone('UTC');
         $endsAtUtc = CarbonImmutable::parse($reservation->ends_at)->setTimezone('UTC');
@@ -79,7 +79,7 @@ class ReservationRulesService
             ]);
         }
 
-        $timezone = $this->settings->getString('timezone');
+        $timezone = $this->timezone();
         $cutoffHours = $this->settings->getInt('cancel_cutoff_hours');
 
         $startsAtLocal = CarbonImmutable::parse($reservation->starts_at)->setTimezone($timezone);
@@ -94,7 +94,7 @@ class ReservationRulesService
 
     private function validateLeadTime(CarbonImmutable $startsAtLocal): void
     {
-        $timezone = $this->settings->getString('timezone');
+        $timezone = $this->timezone();
         $nowLocal = CarbonImmutable::now($timezone);
 
         $minHours = $this->settings->getInt('lead_time_min_hours');
@@ -187,7 +187,7 @@ class ReservationRulesService
 
     private function validateRecurringBlackouts(CarbonImmutable $startsAtUtc, CarbonImmutable $endsAtUtc): void
     {
-        $timezone = $this->settings->getString('timezone');
+        $timezone = $this->timezone();
 
         $startsAtLocal = $startsAtUtc->setTimezone($timezone);
         $endsAtLocal = $endsAtUtc->setTimezone($timezone);
@@ -348,5 +348,10 @@ class ReservationRulesService
                 ]);
             }
         }
+    }
+
+    private function timezone(): string
+    {
+        return (string) config('app.timezone', 'America/Lima');
     }
 }

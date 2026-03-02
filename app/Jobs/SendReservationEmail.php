@@ -2,12 +2,12 @@
 
 namespace App\Jobs;
 
-use App\Actions\Settings\SettingsService;
 use App\Mail\MailDeliveryState;
 use App\Mail\ReservationStatusMail;
 use App\Models\Enums\ReservationArtifactKind;
 use App\Models\Enums\ReservationArtifactStatus;
 use App\Models\ReservationArtifact;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
@@ -27,7 +27,7 @@ class SendReservationEmail implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(SettingsService $settings): void
+    public function handle(): void
     {
         $artifact = ReservationArtifact::query()
             ->with(['reservation.user'])
@@ -40,7 +40,7 @@ class SendReservationEmail implements ShouldQueue
         $artifact->forceFill([
             'status' => ReservationArtifactStatus::Pending,
             'attempts' => $artifact->attempts + 1,
-            'last_attempt_at' => now(),
+            'last_attempt_at' => CarbonImmutable::now('UTC'),
             'last_error' => null,
         ])->save();
 
@@ -83,7 +83,6 @@ class SendReservationEmail implements ShouldQueue
                 ->send(new ReservationStatusMail(
                     reservation: $reservation,
                     event: $event,
-                    timezone: $settings->getString('timezone'),
                     attachmentPath: $attachmentPath,
                 ));
 

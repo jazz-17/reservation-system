@@ -6,9 +6,11 @@ use App\Models\Reservation;
 use App\Policies\ReservationPolicy;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Database\Events\ConnectionEstablished;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -40,6 +42,14 @@ class AppServiceProvider extends ServiceProvider
     protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);
+
+        Event::listen(function (ConnectionEstablished $event): void {
+            if ($event->connection->getDriverName() !== 'pgsql') {
+                return;
+            }
+
+            $event->connection->statement("set time zone 'UTC'");
+        });
 
         DB::prohibitDestructiveCommands(
             app()->isProduction(),

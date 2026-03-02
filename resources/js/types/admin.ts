@@ -109,7 +109,6 @@ export type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 export type OpeningHours = Record<DayKey, { open: string; close: string }>;
 
 export type AdminSettings = {
-    timezone: string;
     opening_hours: OpeningHours;
     min_duration_minutes: number;
     max_duration_minutes: number;

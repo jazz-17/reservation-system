@@ -4,6 +4,47 @@ import type {
     ReservationStatus,
 } from '@/types/admin';
 
+export const APP_LOCALE = 'es-PE' as const;
+export const APP_TIMEZONE = 'America/Lima' as const;
+
+type YmdParts = { year: string; month: string; day: string };
+
+const ymdPartsInTimeZone = (date: Date, timeZone: string): YmdParts => {
+    const parts = new Intl.DateTimeFormat('en', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).formatToParts(date);
+
+    const year = parts.find((p) => p.type === 'year')?.value;
+    const month = parts.find((p) => p.type === 'month')?.value;
+    const day = parts.find((p) => p.type === 'day')?.value;
+
+    if (!year || !month || !day) {
+        return { year: '0000', month: '00', day: '00' };
+    }
+
+    return { year, month, day };
+};
+
+export function formatYmdInTimeZone(date: Date, timeZone = APP_TIMEZONE): string {
+    const { year, month, day } = ymdPartsInTimeZone(date, timeZone);
+
+    return `${year}-${month}-${day}`;
+}
+
+export function formatDate(iso: string): string {
+    const d = new Date(iso);
+
+    return new Intl.DateTimeFormat(APP_LOCALE, {
+        timeZone: APP_TIMEZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(d);
+}
+
 /**
  * Format an ISO datetime string for display in es-PE locale.
  *
@@ -16,7 +57,8 @@ export function formatDateTime(
 ): string {
     const d = new Date(iso);
 
-    return new Intl.DateTimeFormat('es-PE', {
+    return new Intl.DateTimeFormat(APP_LOCALE, {
+        timeZone: APP_TIMEZONE,
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',

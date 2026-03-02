@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Audit\Audit;
-use App\Actions\Settings\SettingsService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreBlackoutRequest;
 use App\Http\Requests\Admin\StoreRecurringBlackoutRequest;
@@ -24,14 +23,14 @@ class BlackoutController extends Controller
         ]);
     }
 
-    public function store(StoreBlackoutRequest $request, SettingsService $settings): RedirectResponse
+    public function store(StoreBlackoutRequest $request): RedirectResponse
     {
         $admin = $request->user();
         if ($admin === null) {
             abort(401);
         }
 
-        $timezone = $settings->getString('timezone');
+        $timezone = (string) config('app.timezone', 'America/Lima');
 
         $startsAtUtc = CarbonImmutable::parse($request->validated('starts_at'), $timezone)->setTimezone('UTC');
         $endsAtUtc = CarbonImmutable::parse($request->validated('ends_at'), $timezone)->setTimezone('UTC');

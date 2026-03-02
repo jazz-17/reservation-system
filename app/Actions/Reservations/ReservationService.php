@@ -68,7 +68,7 @@ class ReservationService
             $reservation->forceFill([
                 'status' => ReservationStatus::Cancelled,
                 'cancelled_by' => $actor->id,
-                'cancelled_at' => now(),
+                'cancelled_at' => CarbonImmutable::now('UTC'),
                 'cancellation_reason' => $reason,
             ])->save();
 
@@ -100,7 +100,7 @@ class ReservationService
                 $reservation->forceFill([
                     'status' => ReservationStatus::Approved,
                     'decided_by' => $admin->id,
-                    'decided_at' => now(),
+                    'decided_at' => CarbonImmutable::now('UTC'),
                     'decision_reason' => $reason,
                 ])->save();
 
@@ -134,7 +134,7 @@ class ReservationService
             $reservation->forceFill([
                 'status' => ReservationStatus::Rejected,
                 'decided_by' => $admin->id,
-                'decided_at' => now(),
+                'decided_at' => CarbonImmutable::now('UTC'),
                 'decision_reason' => $reason,
             ])->save();
 
@@ -277,7 +277,7 @@ class ReservationService
             "reservation:user:{$user->id}",
         ]);
 
-        $timezone = $this->settings->getString('timezone');
+        $timezone = (string) config('app.timezone', 'America/Lima');
         $startsAtLocal = $startsAtUtc->setTimezone($timezone);
         $weekStartLocal = $startsAtLocal->startOfWeek(CarbonInterface::MONDAY)->toDateString();
 

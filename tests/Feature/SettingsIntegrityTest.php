@@ -6,7 +6,7 @@ use App\Settings\Exceptions\MissingSettingsException;
 use App\Settings\SettingsIntegrity;
 
 test('settings integrity fails when a required key is missing', function () {
-    Setting::query()->whereKey('timezone')->delete();
+    Setting::query()->whereKey('min_duration_minutes')->delete();
 
     expect(fn () => app(SettingsIntegrity::class)->assertReady())
         ->toThrow(MissingSettingsException::class);

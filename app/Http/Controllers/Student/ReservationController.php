@@ -23,21 +23,20 @@ class ReservationController extends Controller
     public function create(SettingsService $settings): Response
     {
         return Inertia::render('reservations/Create', [
-            'timezone' => $settings->getString('timezone'),
             'opening_hours' => $settings->get('opening_hours'),
             'min_duration_minutes' => $settings->getInt('min_duration_minutes'),
             'max_duration_minutes' => $settings->getInt('max_duration_minutes'),
         ]);
     }
 
-    public function store(StoreReservationRequest $request, ReservationService $service, SettingsService $settings): RedirectResponse
+    public function store(StoreReservationRequest $request, ReservationService $service): RedirectResponse
     {
         $user = $request->user();
         if ($user === null) {
             abort(401);
         }
 
-        $timezone = $settings->getString('timezone');
+        $timezone = (string) config('app.timezone', 'America/Lima');
 
         $startsAtUtc = CarbonImmutable::parse($request->validated('starts_at'), $timezone)->setTimezone('UTC');
         $endsAtUtc = CarbonImmutable::parse($request->validated('ends_at'), $timezone)->setTimezone('UTC');

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Actions\Settings\SettingsService;
 use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
 use Carbon\CarbonImmutable;
@@ -11,7 +10,7 @@ use Illuminate\Http\Request;
 
 class AdminAuditController extends Controller
 {
-    public function __invoke(Request $request, SettingsService $settings): JsonResponse
+    public function __invoke(Request $request): JsonResponse
     {
         if (! $request->user()?->can('admin.supervision.auditoria.view')) {
             abort(403);
@@ -23,7 +22,7 @@ class AdminAuditController extends Controller
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
         ]);
 
-        $timezone = $settings->getString('timezone');
+        $timezone = (string) config('app.timezone', 'America/Lima');
 
         $query = AuditEvent::query()
             ->with(['actor:id,name'])

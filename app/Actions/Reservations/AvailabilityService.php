@@ -2,7 +2,6 @@
 
 namespace App\Actions\Reservations;
 
-use App\Actions\Settings\SettingsService;
 use App\Models\Blackout;
 use App\Models\Enums\ReservationStatus;
 use App\Models\RecurringBlackout;
@@ -14,14 +13,12 @@ use Spatie\Period\Precision;
 
 class AvailabilityService
 {
-    public function __construct(private readonly SettingsService $settings) {}
-
     /**
      * @return array<int, array<string, mixed>>
      */
     public function eventsForRange(string $start, string $end): array
     {
-        $timezone = $this->settings->getString('timezone');
+        $timezone = (string) config('app.timezone', 'America/Lima');
 
         $startLocal = CarbonImmutable::parse($start, $timezone);
         $endLocal = CarbonImmutable::parse($end, $timezone);
