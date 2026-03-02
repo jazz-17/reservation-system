@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\SendUserEmailVerificationRequest;
 use App\Http\Requests\Admin\SendUserPasswordResetRequest;
 use App\Http\Requests\Admin\ToggleUserStatusRequest;
 use App\Http\Requests\Admin\UpdateUserRolesRequest;
+use App\Models\AuditEvent;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,6 +32,7 @@ class UserManagementController extends Controller
                 'email',
                 'email_verified_at',
                 'disabled_at',
+                'is_protected',
                 'created_at',
             ])
             ->with([
@@ -51,6 +53,19 @@ class UserManagementController extends Controller
                 /** @var array<int, string> $roles */
                 $roles = $user->roles->pluck('name')->values()->all();
 
+                $recentActivity = AuditEvent::query()
+                    ->where('subject_type', User::class)
+                    ->where('subject_id', $user->id)
+                    ->orderByDesc('created_at')
+                    ->limit(3)
+                    ->get()
+                    ->map(fn (AuditEvent $e): array => [
+                        'event_type' => $e->event_type,
+                        'actor_name' => $e->actor?->name,
+                        'created_at' => $e->created_at?->toISOString(),
+                    ])
+                    ->all();
+
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -58,7 +73,9 @@ class UserManagementController extends Controller
                     'roles' => $roles,
                     'email_verified_at' => $user->email_verified_at?->toISOString(),
                     'disabled_at' => $user->disabled_at?->toISOString(),
+                    'is_protected' => $user->is_protected,
                     'created_at' => $user->created_at?->toISOString(),
+                    'recent_activity' => $recentActivity,
                 ];
             });
 
@@ -76,6 +93,10 @@ class UserManagementController extends Controller
         $actor = $request->user();
         if (! $actor instanceof User) {
             abort(401);
+        }
+
+        if ($user->isProtected()) {
+            return back()->withErrors(['roles' => 'Este usuario está protegido y no se pueden modificar sus roles.']);
         }
 
         /** @var array<int, string> $roles */
@@ -114,6 +135,10 @@ class UserManagementController extends Controller
         $actor = $request->user();
         if (! $actor instanceof User) {
             abort(401);
+        }
+
+        if ($user->isProtected()) {
+            return back()->withErrors(['disabled' => 'Este usuario está protegido y no se puede cambiar su estado.']);
         }
 
         $disabled = (bool) $request->validated('disabled');
@@ -156,6 +181,10 @@ class UserManagementController extends Controller
         $actor = $request->user();
         if (! $actor instanceof User) {
             abort(401);
+        }
+
+        if ($user->isProtected()) {
+            return back()->withErrors(['email' => 'Este usuario está protegido y no se puede enviar restablecimiento de contraseña.']);
         }
 
         $status = Password::sendResetLink([

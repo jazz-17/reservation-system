@@ -53,9 +53,13 @@ class ReservationService
                 return $reservation;
             });
         } catch (QueryException $exception) {
-            throw ValidationException::withMessages([
-                'starts_at' => 'Horario no disponible.',
-            ]);
+            if ($exception->getCode() === '23P01') {
+                throw ValidationException::withMessages([
+                    'starts_at' => 'Horario no disponible.',
+                ]);
+            }
+
+            throw $exception;
         }
     }
 
@@ -110,9 +114,13 @@ class ReservationService
                 return $reservation->refresh();
             });
         } catch (QueryException $exception) {
-            throw ValidationException::withMessages([
-                'starts_at' => 'Horario no disponible.',
-            ]);
+            if ($exception->getCode() === '23P01') {
+                throw ValidationException::withMessages([
+                    'starts_at' => 'Horario no disponible.',
+                ]);
+            }
+
+            throw $exception;
         }
 
         $this->enqueueEmails($updated, event: 'approved');

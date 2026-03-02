@@ -11,8 +11,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
-import adminRolesPermissionsRoutes from '@/routes/admin/roles-permissions';
 import adminRequestsRoutes from '@/routes/admin/requests';
+import adminRolesPermissionsRoutes from '@/routes/admin/roles-permissions';
 
 const props = defineProps<{
     roles: Array<{

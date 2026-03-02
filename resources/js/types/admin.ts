@@ -31,6 +31,18 @@ export type AdminReservation = {
     user: AdminUser;
 };
 
+export type SimplePaginatedResponse<T> = {
+    current_page: number;
+    data: T[];
+    first_page_url: string;
+    from: number | null;
+    next_page_url: string | null;
+    path: string;
+    per_page: number;
+    prev_page_url: string | null;
+    to: number | null;
+};
+
 export type Artifact = {
     id: number;
     kind: ArtifactKind;
@@ -129,6 +141,12 @@ export type ImportReport = {
     batch_id: string;
 };
 
+export type UserAuditActivity = {
+    event_type: string;
+    actor_name: string | null;
+    created_at: string | null;
+};
+
 export type ManagedUser = {
     id: number;
     name: string;
@@ -136,5 +154,7 @@ export type ManagedUser = {
     roles: string[];
     email_verified_at: string | null;
     disabled_at: string | null;
+    is_protected: boolean;
     created_at: string | null;
+    recent_activity: UserAuditActivity[];
 };

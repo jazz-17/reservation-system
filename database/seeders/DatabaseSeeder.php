@@ -52,6 +52,7 @@ class DatabaseSeeder extends Seeder
                 'base_year' => null,
                 'password' => Hash::make($adminPassword),
                 'email_verified_at' => now(),
+                'is_protected' => true,
             ],
         );
 

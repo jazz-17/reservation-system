@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import AdminSection from '@/components/admin/AdminSection.vue';
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
     Dialog,
     DialogClose,
@@ -29,9 +34,9 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
-import { formatDate } from '@/lib/formatters';
-import adminUsersRoutes from '@/routes/admin/users';
+import { formatDate, formatDateTime } from '@/lib/formatters';
 import adminRequestsRoutes from '@/routes/admin/requests';
+import adminUsersRoutes from '@/routes/admin/users';
 import type { ManagedUser } from '@/types/admin';
 
 type PaginationLink = {
@@ -58,6 +63,17 @@ useBreadcrumbs([
 
 const search = ref(props.filters.search);
 
+// Dialog state management for per-user role modals
+const rolesDialogOpen = reactive<Record<number, boolean>>({});
+
+const openRolesDialog = (userId: number): void => {
+    rolesDialogOpen[userId] = true;
+};
+
+const closeRolesDialog = (userId: number): void => {
+    rolesDialogOpen[userId] = false;
+};
+
 const submitSearch = (): void => {
     router.get(
         adminUsersRoutes.index().url,
@@ -68,6 +84,7 @@ const submitSearch = (): void => {
 
 const isDisabled = (user: ManagedUser): boolean => Boolean(user.disabled_at);
 const isVerified = (user: ManagedUser): boolean => Boolean(user.email_verified_at);
+const isProtected = (user: ManagedUser): boolean => Boolean(user.is_protected);
 
 const rolesFor = (user: ManagedUser): string[] => {
     return Array.isArray(user.roles) ? user.roles : [];
@@ -101,6 +118,22 @@ const hasStaffRole = (roles: string[]): boolean =>
 const roleHelpText = computed(() => {
     return 'Roles fijos. Si asignas un rol staff (admin/operator/auditor), el rol student se removerá automáticamente.';
 });
+
+const eventTypeLabels: Record<string, string> = {
+    'user.roles_updated': 'Roles actualizados',
+    'user.disabled': 'Desactivado',
+    'user.enabled': 'Activado',
+    'user.password_reset_sent': 'Reset de contraseña',
+    'user.verification_sent': 'Verificación enviada',
+};
+
+const formatEventType = (eventType: string): string => {
+    return eventTypeLabels[eventType] ?? eventType;
+};
+
+const hasActivity = (user: ManagedUser): boolean => {
+    return user.recent_activity && user.recent_activity.length > 0;
+};
 
 const toggleDisabled = (user: ManagedUser, disabled: boolean): void => {
     router.put(
@@ -172,9 +205,16 @@ const resendVerification = (user: ManagedUser): void => {
             <TableBody>
                 <TableRow v-for="u in props.users.data" :key="u.id">
                     <TableCell>
-                        <div class="flex flex-col">
-                            <div class="font-medium">
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center gap-2 font-medium">
                                 {{ u.name }}
+                                <Badge
+                                    v-if="isProtected(u)"
+                                    variant="outline"
+                                    class="text-xs"
+                                >
+                                    Protegido
+                                </Badge>
                             </div>
                             <div class="text-xs text-muted-foreground">
                                 {{ u.email }}
@@ -182,6 +222,28 @@ const resendVerification = (user: ManagedUser): void => {
                             <div v-if="u.created_at" class="text-xs text-muted-foreground">
                                 Creado: {{ formatDate(u.created_at) }}
                             </div>
+                            <Collapsible v-if="hasActivity(u)" class="mt-1">
+                                <CollapsibleTrigger class="text-xs text-primary hover:underline">
+                                    Ver actividad reciente ({{ u.recent_activity.length }})
+                                </CollapsibleTrigger>
+                                <CollapsibleContent class="mt-1 space-y-1">
+                                    <div
+                                        v-for="(activity, idx) in u.recent_activity"
+                                        :key="idx"
+                                        class="flex flex-col rounded bg-muted/50 px-2 py-1 text-xs"
+                                    >
+                                        <span class="font-medium">
+                                            {{ formatEventType(activity.event_type) }}
+                                        </span>
+                                        <span class="text-muted-foreground">
+                                            {{ activity.actor_name ?? 'Sistema' }}
+                                            <template v-if="activity.created_at">
+                                                — {{ formatDateTime(activity.created_at) }}
+                                            </template>
+                                        </span>
+                                    </div>
+                                </CollapsibleContent>
+                            </Collapsible>
                         </div>
                     </TableCell>
 
@@ -230,9 +292,17 @@ const resendVerification = (user: ManagedUser): void => {
 
                     <TableCell class="text-right">
                         <div class="flex flex-wrap justify-end gap-2">
-                            <Dialog>
+                            <Dialog
+                                :open="rolesDialogOpen[u.id] ?? false"
+                                @update:open="(val: boolean) => val ? openRolesDialog(u.id) : closeRolesDialog(u.id)"
+                            >
                                 <DialogTrigger as-child>
-                                    <Button type="button" variant="outline" size="sm">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        :disabled="isProtected(u)"
+                                    >
                                         Roles
                                     </Button>
                                 </DialogTrigger>
@@ -242,6 +312,7 @@ const resendVerification = (user: ManagedUser): void => {
                                         v-slot="{ errors, processing }"
                                         :options="{ preserveScroll: true }"
                                         class="space-y-4"
+                                        @success="closeRolesDialog(u.id)"
                                     >
                                         <DialogHeader class="space-y-2">
                                             <DialogTitle>Editar roles</DialogTitle>
@@ -262,6 +333,7 @@ const resendVerification = (user: ManagedUser): void => {
                                                     name="roles[]"
                                                     :value="r.role"
                                                     :checked="r.checked"
+                                                    :disabled="processing"
                                                 />
                                                 <Label
                                                     :for="`role-${u.id}-${r.role}`"
@@ -284,12 +356,16 @@ const resendVerification = (user: ManagedUser): void => {
 
                                         <DialogFooter class="gap-2">
                                             <DialogClose as-child>
-                                                <Button type="button" variant="secondary">
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    :disabled="processing"
+                                                >
                                                     Cancelar
                                                 </Button>
                                             </DialogClose>
                                             <Button type="submit" :disabled="processing">
-                                                Guardar
+                                                {{ processing ? 'Guardando...' : 'Guardar' }}
                                             </Button>
                                         </DialogFooter>
                                     </Form>
@@ -301,6 +377,7 @@ const resendVerification = (user: ManagedUser): void => {
                                 :description="isDisabled(u) ? 'El usuario podrá iniciar sesión nuevamente.' : 'El usuario no podrá iniciar sesión. Sus sesiones activas serán cerradas.'"
                                 :confirm-label="isDisabled(u) ? 'Activar' : 'Desactivar'"
                                 :variant="isDisabled(u) ? 'default' : 'destructive'"
+                                :disabled="isProtected(u)"
                                 @confirm="toggleDisabled(u, !isDisabled(u))"
                             >
                                 <template #trigger>
@@ -308,6 +385,7 @@ const resendVerification = (user: ManagedUser): void => {
                                         type="button"
                                         size="sm"
                                         :variant="isDisabled(u) ? 'outline' : 'destructive'"
+                                        :disabled="isProtected(u)"
                                     >
                                         {{ isDisabled(u) ? 'Activar' : 'Desactivar' }}
                                     </Button>
@@ -318,10 +396,16 @@ const resendVerification = (user: ManagedUser): void => {
                                 title="¿Enviar enlace de restablecimiento?"
                                 description="Se enviará un correo para restablecer la contraseña."
                                 confirm-label="Enviar"
+                                :disabled="isProtected(u)"
                                 @confirm="sendPasswordReset(u)"
                             >
                                 <template #trigger>
-                                    <Button type="button" variant="ghost" size="sm">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        :disabled="isProtected(u)"
+                                    >
                                         Reset
                                     </Button>
                                 </template>

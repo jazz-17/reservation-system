@@ -7,7 +7,6 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
     Table,
     TableBody,
@@ -16,6 +15,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { APP_LOCALE, APP_TIMEZONE } from '@/lib/formatters';
 import adminRequestsRoutes from '@/routes/admin/requests';

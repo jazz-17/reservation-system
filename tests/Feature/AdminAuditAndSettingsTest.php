@@ -110,3 +110,33 @@ test('artifact retry is audited', function () {
         ->exists()
     )->toBeTrue();
 });
+
+test('admin settings update rejects opening hours where close is before open', function () {
+    $admin = User::factory()->admin()->create();
+
+    $payload = SettingsSchema::defaults();
+    $payload['opening_hours']['mon'] = ['open' => '22:00', 'close' => '08:00'];
+
+    $this->actingAs($admin)
+        ->putJson(route('admin.settings.update'), $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['opening_hours.mon.close']);
+});
+
+test('admin settings update rejects opening hours where close equals open', function () {
+    $admin = User::factory()->admin()->create();
+
+    $payload = SettingsSchema::defaults();
+    $payload['opening_hours']['mon'] = ['open' => '10:00', 'close' => '10:00'];
+
+    $this->actingAs($admin)
+        ->putJson(route('admin.settings.update'), $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['opening_hours.mon.close']);
+});
+
+test('blade layout includes csrf meta tag', function () {
+    $this->get(route('calendar.public'))
+        ->assertOk()
+        ->assertSee('<meta name="csrf-token" content="', false);
+});

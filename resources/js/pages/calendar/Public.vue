@@ -12,8 +12,8 @@ import { computed, ref } from 'vue';
 import AppCalendar from '@/components/AppCalendar.vue';
 import { Skeleton } from '@/components/ui/skeleton';
 import PublicLayout from '@/layouts/PublicLayout.vue';
-import { fetchJson } from '@/lib/http';
 import { APP_TIMEZONE } from '@/lib/formatters';
+import { fetchJson } from '@/lib/http';
 import publicApiRoutes from '@/routes/api/public';
 import reservationsRoutes from '@/routes/reservations';
 

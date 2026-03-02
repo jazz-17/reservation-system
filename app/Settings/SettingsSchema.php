@@ -72,13 +72,28 @@ class SettingsSchema
     {
         $normalized = self::normalize($values);
 
-        $validator = Validator::make($normalized, self::rules());
+        $validator = Validator::make($normalized, self::rules(), self::messages());
 
         try {
             return $validator->validate();
         } catch (ValidationException $exception) {
             throw $exception;
         }
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function messages(): array
+    {
+        $messages = [];
+
+        foreach (self::DAYS as $day) {
+            $messages["opening_hours.{$day}.close.after"] =
+                "La hora de cierre del {$day} debe ser posterior a la hora de apertura.";
+        }
+
+        return $messages;
     }
 
     /**
@@ -108,7 +123,7 @@ class SettingsSchema
         foreach (self::DAYS as $day) {
             $rules["opening_hours.{$day}"] = ['required', 'array'];
             $rules["opening_hours.{$day}.open"] = ['required', 'date_format:H:i'];
-            $rules["opening_hours.{$day}.close"] = ['required', 'date_format:H:i'];
+            $rules["opening_hours.{$day}.close"] = ['required', 'date_format:H:i', "after:opening_hours.{$day}.open"];
         }
 
         return $rules;

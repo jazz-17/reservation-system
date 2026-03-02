@@ -14,8 +14,8 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
-import { fetchJson } from '@/lib/http';
 import { APP_TIMEZONE, formatYmdInTimeZone } from '@/lib/formatters';
+import { fetchJson } from '@/lib/http';
 import publicApiRoutes from '@/routes/api/public';
 import reservationsRoutes from '@/routes/reservations';
 

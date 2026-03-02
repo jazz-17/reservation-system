@@ -27,10 +27,8 @@ class AdminRequestsController extends Controller
                 'user.professionalSchool.faculty:id,name',
             ])
             ->orderBy('starts_at')
-            ->get();
+            ->simplePaginate(15);
 
-        return response()->json([
-            'data' => $reservations,
-        ]);
+        return response()->json($reservations);
     }
 }

@@ -28,4 +28,12 @@ class UpdateSettingsRequest extends FormRequest
 
         return $rules;
     }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return SettingsSchema::messages();
+    }
 }

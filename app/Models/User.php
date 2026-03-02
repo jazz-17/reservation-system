@@ -34,6 +34,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'student_code',
         'password',
+        'is_protected',
     ];
 
     /**
@@ -61,6 +62,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'two_factor_confirmed_at' => 'datetime',
             'base_year' => 'integer',
             'disabled_at' => 'immutable_datetime',
+            'is_protected' => 'boolean',
         ];
     }
 
@@ -88,6 +90,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isDisabled(): bool
     {
         return $this->disabled_at !== null;
+    }
+
+    public function isProtected(): bool
+    {
+        return (bool) $this->is_protected;
     }
 
     public function sendEmailVerificationNotification(): void
