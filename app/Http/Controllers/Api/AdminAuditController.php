@@ -26,8 +26,7 @@ class AdminAuditController extends Controller
 
         $query = AuditEvent::query()
             ->with(['actor:id,name'])
-            ->latest('created_at')
-            ->limit(300);
+            ->latest('created_at');
 
         if (! empty($validated['event_type'])) {
             $query->where('event_type', $validated['event_type']);
@@ -43,6 +42,8 @@ class AdminAuditController extends Controller
             $query->where('created_at', '<=', $toUtc);
         }
 
+        $paginator = $query->simplePaginate(25);
+
         $eventTypes = AuditEvent::query()
             ->select('event_type')
             ->distinct()
@@ -50,9 +51,8 @@ class AdminAuditController extends Controller
             ->pluck('event_type')
             ->all();
 
-        return response()->json([
-            'data' => $query->get(),
-            'eventTypes' => $eventTypes,
-        ]);
+        return response()->json(
+            array_merge($paginator->toArray(), ['eventTypes' => $eventTypes])
+        );
     }
 }

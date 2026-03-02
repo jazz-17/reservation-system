@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { useQuery } from '@tanstack/vue-query';
-import { computed, ref } from 'vue';
+import { keepPreviousData, useQuery } from '@tanstack/vue-query';
+import { computed, ref, watch } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import AdminSection from '@/components/admin/AdminSection.vue';
+import PaginationFooter from '@/components/admin/PaginationFooter.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
@@ -23,7 +24,7 @@ import { fetchJson } from '@/lib/http';
 import adminAuditRoutes from '@/routes/admin/audit';
 import adminRequestsRoutes from '@/routes/admin/requests';
 import adminApiRoutes from '@/routes/api/admin';
-import type { AuditEvent } from '@/types/admin';
+import type { AuditEvent, SimplePaginatedResponse } from '@/types/admin';
 
 useBreadcrumbs([
     { title: 'Admin', href: adminRequestsRoutes.index().url },
@@ -42,16 +43,27 @@ const queryOptions = computed(() => {
     return query;
 });
 
-const { data, isLoading, isError } = useQuery({
-    queryKey: ['admin-audit', queryOptions],
-    queryFn: () =>
-        fetchJson<{ data: AuditEvent[]; eventTypes: string[] }>(
-            adminApiRoutes.audit.url({ query: queryOptions.value }),
-        ),
+const page = ref(1);
+
+watch(queryOptions, () => {
+    page.value = 1;
 });
 
-const events = computed(() => data.value?.data ?? []);
-const eventTypes = computed(() => data.value?.eventTypes ?? []);
+const { data: paginatedData, isLoading, isError, isPlaceholderData } = useQuery({
+    queryKey: ['admin-audit', queryOptions, page],
+    queryFn: () =>
+        fetchJson<SimplePaginatedResponse<AuditEvent> & { eventTypes: string[] }>(
+            adminApiRoutes.audit.url({
+                query: { ...queryOptions.value, page: String(page.value) },
+            }),
+        ),
+    placeholderData: keepPreviousData,
+});
+
+const events = computed(() => paginatedData.value?.data ?? []);
+const eventTypes = computed(() => paginatedData.value?.eventTypes ?? []);
+const hasNextPage = computed(() => paginatedData.value?.next_page_url != null);
+const hasPrevPage = computed(() => paginatedData.value?.prev_page_url != null);
 </script>
 
 <template>
@@ -144,10 +156,23 @@ const eventTypes = computed(() => data.value?.eventTypes ?? []);
                         {{ formatAuditSubject(e) }}
                     </TableCell>
                 </TableRow>
-                <TableEmpty v-if="events.length === 0" :colspan="4">
+                <TableEmpty
+                    v-if="events.length === 0 && !hasPrevPage"
+                    :colspan="4"
+                >
                     Sin eventos.
                 </TableEmpty>
             </TableBody>
         </Table>
+
+        <PaginationFooter
+            v-if="!isLoading && !isError && (events.length > 0 || hasPrevPage)"
+            :current-page="paginatedData?.current_page ?? 1"
+            :has-next-page="hasNextPage"
+            :has-prev-page="hasPrevPage"
+            :is-loading="isPlaceholderData"
+            @prev="page--"
+            @next="page++"
+        />
     </div>
 </template>

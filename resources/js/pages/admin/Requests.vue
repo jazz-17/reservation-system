@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { ref } from 'vue';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/vue-query';
+import { computed, ref } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
+import PaginationFooter from '@/components/admin/PaginationFooter.vue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,7 +13,7 @@ import { formatBaseYear, formatDateTime } from '@/lib/formatters';
 import { fetchJson } from '@/lib/http';
 import adminRequestsRoutes from '@/routes/admin/requests';
 import adminApiRoutes from '@/routes/api/admin';
-import type { AdminReservation } from '@/types/admin';
+import type { AdminReservation, SimplePaginatedResponse } from '@/types/admin';
 
 useBreadcrumbs([
     { title: 'Admin', href: adminRequestsRoutes.index().url },
@@ -25,13 +26,20 @@ const actionError = ref<{ reservationId: number; message: string } | null>(
     null,
 );
 
-const { data, isLoading, isError } = useQuery({
-    queryKey: ['admin-requests'],
+const page = ref(1);
+
+const { data: paginatedData, isLoading, isError, isPlaceholderData } = useQuery({
+    queryKey: ['admin-requests', page],
     queryFn: () =>
-        fetchJson<{ data: AdminReservation[] }>(adminApiRoutes.requests.url()).then(
-            (r) => r.data,
+        fetchJson<SimplePaginatedResponse<AdminReservation>>(
+            adminApiRoutes.requests.url({ query: { page: String(page.value) } }),
         ),
+    placeholderData: keepPreviousData,
 });
+
+const items = computed(() => paginatedData.value?.data ?? []);
+const hasNextPage = computed(() => paginatedData.value?.next_page_url != null);
+const hasPrevPage = computed(() => paginatedData.value?.prev_page_url != null);
 
 const decide = (
     action: 'approve' | 'reject',
@@ -50,6 +58,7 @@ const decide = (
         { reason: reason ?? null },
         {
             onSuccess: () => {
+                page.value = 1;
                 queryClient.invalidateQueries({ queryKey: ['admin-requests'] });
             },
             onError: (errors: Record<string, string>) => {
@@ -100,7 +109,7 @@ const decide = (
         </div>
         <div v-else class="grid gap-3">
             <div
-                v-for="r in data ?? []"
+                v-for="r in items"
                 :key="r.id"
                 class="rounded-lg border border-border/60 p-4"
             >
@@ -177,11 +186,21 @@ const decide = (
             </div>
 
             <div
-                v-if="(data ?? []).length === 0"
+                v-if="items.length === 0 && !hasPrevPage"
                 class="rounded-lg border border-border/60 p-6 text-sm text-muted-foreground"
             >
                 No hay solicitudes pendientes.
             </div>
+
+            <PaginationFooter
+                v-if="items.length > 0 || hasPrevPage"
+                :current-page="paginatedData?.current_page ?? 1"
+                :has-next-page="hasNextPage"
+                :has-prev-page="hasPrevPage"
+                :is-loading="isPlaceholderData"
+                @prev="page--"
+                @next="page++"
+            />
         </div>
     </div>
 </template>

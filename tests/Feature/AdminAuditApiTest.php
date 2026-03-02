@@ -33,7 +33,12 @@ test('admin can access audit api and receives json', function () {
         ->getJson(route('api.admin.audit'))
         ->assertOk()
         ->assertJsonStructure([
+            'current_page',
             'data' => [['id', 'event_type', 'actor_id', 'created_at']],
+            'first_page_url',
+            'per_page',
+            'next_page_url',
+            'prev_page_url',
             'eventTypes',
         ])
         ->assertJsonCount(1, 'data')
@@ -123,4 +128,34 @@ test('audit api returns event types list', function () {
 
     $eventTypes = $response->json('eventTypes');
     expect($eventTypes)->toContain('reservation.created', 'settings.updated');
+});
+
+test('audit api paginates results and includes eventTypes on each page', function () {
+    $admin = User::factory()->admin()->create();
+
+    for ($i = 0; $i < 30; $i++) {
+        AuditEvent::query()->create([
+            'event_type' => 'settings.updated',
+            'actor_id' => $admin->id,
+            'subject_type' => null,
+            'subject_id' => null,
+            'metadata' => null,
+        ]);
+    }
+
+    $page1 = $this->actingAs($admin)
+        ->getJson(route('api.admin.audit'))
+        ->assertOk();
+
+    expect($page1->json('data'))->toHaveCount(25);
+    expect($page1->json('next_page_url'))->not->toBeNull();
+    expect($page1->json('eventTypes'))->toContain('settings.updated');
+
+    $page2 = $this->actingAs($admin)
+        ->getJson(route('api.admin.audit', ['page' => 2]))
+        ->assertOk();
+
+    expect($page2->json('data'))->toHaveCount(5);
+    expect($page2->json('next_page_url'))->toBeNull();
+    expect($page2->json('eventTypes'))->toContain('settings.updated');
 });

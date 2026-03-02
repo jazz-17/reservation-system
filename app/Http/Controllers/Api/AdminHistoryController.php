@@ -50,8 +50,6 @@ class AdminHistoryController extends Controller
             $query->where('starts_at', '<=', $toUtc);
         }
 
-        return response()->json([
-            'data' => $query->limit(500)->get(),
-        ]);
+        return response()->json($query->simplePaginate(25));
     }
 }
