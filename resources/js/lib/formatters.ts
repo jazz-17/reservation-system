@@ -96,7 +96,6 @@ export function formatReservationStatus(status: ReservationStatus): string {
 }
 
 const artifactKindLabels: Record<ArtifactKind, string> = {
-    pdf: 'PDF',
     email_admin: 'Email (Admin)',
     email_student: 'Email (Estudiante)',
 };

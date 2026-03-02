@@ -1,6 +1,6 @@
 <?php
 
-use App\Jobs\GenerateReservationPdf;
+use App\Jobs\SendReservationEmail;
 use App\Models\AuditEvent;
 use App\Models\Enums\ReservationArtifactKind;
 use App\Models\Reservation;
@@ -92,14 +92,14 @@ test('artifact retry is audited', function () {
 
     $artifact = ReservationArtifact::factory()->create([
         'reservation_id' => $reservation->id,
-        'kind' => ReservationArtifactKind::Pdf,
+        'kind' => ReservationArtifactKind::EmailStudent,
     ]);
 
     $this->actingAs($admin)
         ->post(route('admin.artifacts.retry', $artifact))
         ->assertRedirect();
 
-    Queue::assertPushed(GenerateReservationPdf::class, function (GenerateReservationPdf $job) use ($artifact): bool {
+    Queue::assertPushed(SendReservationEmail::class, function (SendReservationEmail $job) use ($artifact): bool {
         return $job->artifactId === $artifact->id;
     });
 

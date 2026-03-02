@@ -1,6 +1,5 @@
 <?php
 
-use App\Jobs\GenerateReservationPdf;
 use App\Jobs\SendReservationEmail;
 use App\Mail\ReservationStatusMail;
 use App\Models\AllowListEntry;
@@ -17,7 +16,6 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Facades\Storage;
 
 test('registration is blocked when email is not in allow-list', function () {
     $email = 'student.notallowed@unmsm.edu.pe';
@@ -256,7 +254,7 @@ test('admins cannot approve a reservation if its duration is invalid at approval
     expect($pending->refresh()->status)->toBe(ReservationStatus::Pending);
 });
 
-test('approving a reservation enqueues pdf and email artifacts', function () {
+test('approving a reservation enqueues email artifacts', function () {
     Queue::fake();
 
     Setting::query()->updateOrCreate(
@@ -280,11 +278,9 @@ test('approving a reservation enqueues pdf and email artifacts', function () {
     $this->actingAs($admin);
     $this->post(route('admin.requests.approve', $reservation), ['reason' => null])->assertRedirect();
 
-    expect(ReservationArtifact::query()->where('reservation_id', $reservation->id)->where('kind', ReservationArtifactKind::Pdf)->exists())->toBeTrue();
     expect(ReservationArtifact::query()->where('reservation_id', $reservation->id)->where('kind', ReservationArtifactKind::EmailAdmin)->exists())->toBeTrue();
     expect(ReservationArtifact::query()->where('reservation_id', $reservation->id)->where('kind', ReservationArtifactKind::EmailStudent)->exists())->toBeTrue();
 
-    Queue::assertPushed(GenerateReservationPdf::class);
     Queue::assertPushed(SendReservationEmail::class);
 });
 
@@ -618,43 +614,10 @@ test('public availability does not show rejected or cancelled reservations', fun
     expect($reservationEvents)->toBeEmpty();
 });
 
-test('pdf generation job stores the pdf and marks the artifact as sent', function () {
-    Storage::fake('local');
-
-    $reservation = Reservation::factory()->create();
-
-    $artifact = ReservationArtifact::factory()->create([
-        'reservation_id' => $reservation->id,
-        'kind' => ReservationArtifactKind::Pdf,
-        'status' => ReservationArtifactStatus::Pending,
-        'payload' => [],
-    ]);
-
-    (new GenerateReservationPdf($artifact->id))->handle(app(\App\Actions\Settings\SettingsService::class));
-
-    $artifact->refresh();
-
-    expect($artifact->status)->toBe(ReservationArtifactStatus::Sent);
-    expect($artifact->payload['path'] ?? null)->toBeString();
-
-    Storage::disk('local')->assertExists((string) $artifact->payload['path']);
-});
-
 test('email sending job sends the mailable and marks the artifact as sent', function () {
     Mail::fake();
-    Storage::fake('local');
 
     $reservation = Reservation::factory()->create();
-
-    $pdfPath = "reservations/{$reservation->id}/reservation.pdf";
-    Storage::disk('local')->put($pdfPath, 'pdf-bytes');
-
-    ReservationArtifact::factory()->create([
-        'reservation_id' => $reservation->id,
-        'kind' => ReservationArtifactKind::Pdf,
-        'status' => ReservationArtifactStatus::Sent,
-        'payload' => ['path' => $pdfPath],
-    ]);
 
     $artifact = ReservationArtifact::factory()->create([
         'reservation_id' => $reservation->id,
@@ -668,15 +631,13 @@ test('email sending job sends the mailable and marks the artifact as sent', func
         ],
     ]);
 
-    (new SendReservationEmail($artifact->id))->handle(app(\App\Actions\Settings\SettingsService::class));
+    (new SendReservationEmail($artifact->id))->handle();
 
     $artifact->refresh();
     expect($artifact->status)->toBe(ReservationArtifactStatus::Sent);
 
     Mail::assertSent(ReservationStatusMail::class, function (ReservationStatusMail $mail) use ($reservation): bool {
         return $mail->reservation->id === $reservation->id
-            && $mail->event === 'approved'
-            && is_string($mail->attachmentPath)
-            && $mail->attachmentPath !== '';
+            && $mail->event === 'approved';
     });
 });

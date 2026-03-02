@@ -28,7 +28,7 @@ const retry = (id: number): void => {
     <div class="flex flex-col gap-4 p-4">
         <AdminPageHeader
             title="Reintentos"
-            subtitle="Artefactos fallidos (PDF / correos) para reintentar."
+            subtitle="Artefactos fallidos (correos) para reintentar."
         />
 
         <div

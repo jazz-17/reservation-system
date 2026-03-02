@@ -5,7 +5,6 @@ namespace App\Mail;
 use App\Models\Reservation;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -20,7 +19,6 @@ class ReservationStatusMail extends Mailable
     public function __construct(
         public Reservation $reservation,
         public string $event,
-        public ?string $attachmentPath = null,
     ) {}
 
     /**
@@ -58,12 +56,6 @@ class ReservationStatusMail extends Mailable
      */
     public function attachments(): array
     {
-        if ($this->attachmentPath === null) {
-            return [];
-        }
-
-        return [
-            Attachment::fromPath($this->attachmentPath)->as('reserva.pdf'),
-        ];
+        return [];
     }
 }

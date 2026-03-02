@@ -11,7 +11,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -61,20 +60,6 @@ class SendReservationEmail implements ShouldQueue
                 throw new \RuntimeException('Reservation not found.');
             }
 
-            $attachmentPath = null;
-            if ($event === 'approved') {
-                $pdfArtifact = ReservationArtifact::query()
-                    ->where('reservation_id', $reservation->id)
-                    ->where('kind', ReservationArtifactKind::Pdf)
-                    ->where('status', ReservationArtifactStatus::Sent)
-                    ->first();
-
-                $storedPath = is_array($pdfArtifact?->payload) ? ($pdfArtifact->payload['path'] ?? null) : null;
-                if (is_string($storedPath) && Storage::disk('local')->exists($storedPath)) {
-                    $attachmentPath = Storage::disk('local')->path($storedPath);
-                }
-            }
-
             MailDeliveryState::reset();
 
             Mail::to($to)
@@ -83,7 +68,6 @@ class SendReservationEmail implements ShouldQueue
                 ->send(new ReservationStatusMail(
                     reservation: $reservation,
                     event: $event,
-                    attachmentPath: $attachmentPath,
                 ));
 
             if (MailDeliveryState::wasSuppressed()) {

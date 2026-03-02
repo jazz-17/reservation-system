@@ -4,7 +4,6 @@ namespace App\Actions\Reservations;
 
 use App\Actions\Audit\Audit;
 use App\Actions\Settings\SettingsService;
-use App\Jobs\GenerateReservationPdf;
 use App\Jobs\SendReservationEmail;
 use App\Models\Enums\ReservationArtifactKind;
 use App\Models\Enums\ReservationArtifactStatus;
@@ -116,7 +115,6 @@ class ReservationService
             ]);
         }
 
-        $this->enqueuePdf($updated);
         $this->enqueueEmails($updated, event: 'approved');
 
         return $updated;
@@ -186,25 +184,6 @@ class ReservationService
         }
 
         return $reservations->count();
-    }
-
-    private function enqueuePdf(Reservation $reservation): void
-    {
-        $artifact = ReservationArtifact::query()->updateOrCreate(
-            [
-                'reservation_id' => $reservation->id,
-                'kind' => ReservationArtifactKind::Pdf,
-            ],
-            [
-                'status' => ReservationArtifactStatus::Pending,
-                'attempts' => 0,
-                'payload' => [],
-            ],
-        );
-
-        DB::afterCommit(function () use ($artifact): void {
-            GenerateReservationPdf::dispatch($artifact->id);
-        });
     }
 
     private function enqueueEmails(Reservation $reservation, string $event): void

@@ -21,7 +21,7 @@ class ReservationArtifactFactory extends Factory
     {
         return [
             'reservation_id' => Reservation::factory(),
-            'kind' => ReservationArtifactKind::Pdf,
+            'kind' => ReservationArtifactKind::EmailStudent,
             'status' => ReservationArtifactStatus::Pending,
             'attempts' => 0,
             'payload' => [],

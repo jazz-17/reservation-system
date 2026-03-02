@@ -4,9 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Actions\Audit\Audit;
 use App\Http\Controllers\Controller;
-use App\Jobs\GenerateReservationPdf;
 use App\Jobs\SendReservationEmail;
-use App\Models\Enums\ReservationArtifactKind;
 use App\Models\Enums\ReservationArtifactStatus;
 use App\Models\ReservationArtifact;
 use Illuminate\Http\RedirectResponse;
@@ -40,11 +38,7 @@ class ReservationArtifactController extends Controller
             ]);
         }
 
-        if ($artifact->kind === ReservationArtifactKind::Pdf) {
-            GenerateReservationPdf::dispatch($artifact->id);
-        } else {
-            SendReservationEmail::dispatch($artifact->id);
-        }
+        SendReservationEmail::dispatch($artifact->id);
 
         return back()->with('success', 'Reintento encolado.');
     }

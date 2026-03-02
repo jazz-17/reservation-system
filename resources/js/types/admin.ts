@@ -4,7 +4,7 @@ export type ReservationStatus =
     | 'rejected'
     | 'cancelled';
 
-export type ArtifactKind = 'pdf' | 'email_admin' | 'email_student';
+export type ArtifactKind = 'email_admin' | 'email_student';
 
 export type ArtifactStatus = 'pending' | 'sent' | 'failed' | 'skipped';
 
