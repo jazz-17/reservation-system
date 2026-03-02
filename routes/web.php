@@ -111,9 +111,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'permiss
     Route::post('blackouts', [BlackoutController::class, 'store'])
         ->middleware('permission:admin.gestion.blackouts.manage')
         ->name('blackouts.store');
+    Route::post('blackouts/recurring', [BlackoutController::class, 'storeRecurring'])
+        ->middleware('permission:admin.gestion.blackouts.manage')
+        ->name('blackouts.recurring.store');
     Route::delete('blackouts/{blackout}', [BlackoutController::class, 'destroy'])
         ->middleware('permission:admin.gestion.blackouts.manage')
         ->name('blackouts.destroy');
+    Route::delete('blackouts/recurring/{recurringBlackout}', [BlackoutController::class, 'destroyRecurring'])
+        ->middleware('permission:admin.gestion.blackouts.manage')
+        ->name('blackouts.recurring.destroy');
 
     Route::get('auditoria', [AuditController::class, 'index'])
         ->middleware('permission:admin.supervision.auditoria.view')

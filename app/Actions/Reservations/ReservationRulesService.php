@@ -5,6 +5,7 @@ namespace App\Actions\Reservations;
 use App\Actions\Settings\SettingsService;
 use App\Models\Blackout;
 use App\Models\Enums\ReservationStatus;
+use App\Models\RecurringBlackout;
 use App\Models\Reservation;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -35,6 +36,7 @@ class ReservationRulesService
         $this->validateLeadTime($startsAtLocal);
         $this->validateOpeningHours($startsAtLocal, $endsAtLocal);
         $this->validateBlackouts($startsAtUtc, $endsAtUtc);
+        $this->validateRecurringBlackouts($startsAtUtc, $endsAtUtc);
         $this->validateUserActiveLimit($user);
         $this->validateWeeklyQuota($user, $startsAtLocal);
         $this->validateConflicts($startsAtUtc, $endsAtUtc);
@@ -49,6 +51,7 @@ class ReservationRulesService
 
         $this->validateDuration($startsAtUtc, $endsAtUtc);
         $this->validateBlackouts($startsAtUtc, $endsAtUtc);
+        $this->validateRecurringBlackouts($startsAtUtc, $endsAtUtc);
 
         $startsAtLocal = $startsAtUtc->setTimezone($timezone);
         $endsAtLocal = $endsAtUtc->setTimezone($timezone);
@@ -180,6 +183,84 @@ class ReservationRulesService
                 ]);
             }
         }
+    }
+
+    private function validateRecurringBlackouts(CarbonImmutable $startsAtUtc, CarbonImmutable $endsAtUtc): void
+    {
+        $timezone = $this->settings->getString('timezone');
+
+        $startsAtLocal = $startsAtUtc->setTimezone($timezone);
+        $endsAtLocal = $endsAtUtc->setTimezone($timezone);
+
+        $rangeStart = $startsAtLocal->startOfDay();
+        $rangeEnd = $endsAtLocal->subSecond()->startOfDay();
+
+        $weekdays = [];
+        for ($cursor = $rangeStart; $cursor->lessThanOrEqualTo($rangeEnd); $cursor = $cursor->addDay()) {
+            $weekdays[] = $cursor->dayOfWeek;
+        }
+
+        $weekdays = array_values(array_unique($weekdays));
+
+        $rangeStartDate = $rangeStart->toDateString();
+        $rangeEndDate = $rangeEnd->toDateString();
+
+        $rules = RecurringBlackout::query()
+            ->whereIn('weekday', $weekdays)
+            ->where(function ($query) use ($rangeEndDate) {
+                $query->whereNull('starts_on')->orWhere('starts_on', '<=', $rangeEndDate);
+            })
+            ->where(function ($query) use ($rangeStartDate) {
+                $query->whereNull('ends_on')->orWhere('ends_on', '>=', $rangeStartDate);
+            })
+            ->get(['weekday', 'starts_time', 'ends_time', 'starts_on', 'ends_on']);
+
+        if ($rules->isEmpty()) {
+            return;
+        }
+
+        $rulesByWeekday = $rules->groupBy('weekday');
+
+        $requestedPeriod = Period::make($startsAtLocal, $endsAtLocal, Precision::MINUTE(), Boundaries::EXCLUDE_END());
+
+        for ($cursor = $rangeStart; $cursor->lessThanOrEqualTo($rangeEnd); $cursor = $cursor->addDay()) {
+            $weekdayRules = $rulesByWeekday->get($cursor->dayOfWeek);
+            if ($weekdayRules === null) {
+                continue;
+            }
+
+            $dateString = $cursor->toDateString();
+
+            foreach ($weekdayRules as $rule) {
+                if (! $this->recurringRuleIsActiveOnDate($rule, $dateString)) {
+                    continue;
+                }
+
+                $occurrenceStart = CarbonImmutable::parse($dateString.' '.$rule->starts_time, $timezone);
+                $occurrenceEnd = CarbonImmutable::parse($dateString.' '.$rule->ends_time, $timezone);
+
+                $occurrencePeriod = Period::make($occurrenceStart, $occurrenceEnd, Precision::MINUTE(), Boundaries::EXCLUDE_END());
+
+                if ($requestedPeriod->overlapsWith($occurrencePeriod)) {
+                    throw ValidationException::withMessages([
+                        'starts_at' => 'La fecha/hora está bloqueada por mantenimiento o feriado.',
+                    ]);
+                }
+            }
+        }
+    }
+
+    private function recurringRuleIsActiveOnDate(RecurringBlackout $rule, string $dateString): bool
+    {
+        if ($rule->starts_on !== null && $dateString < $rule->starts_on->toDateString()) {
+            return false;
+        }
+
+        if ($rule->ends_on !== null && $dateString > $rule->ends_on->toDateString()) {
+            return false;
+        }
+
+        return true;
     }
 
     private function validateUserActiveLimit(User $user): void

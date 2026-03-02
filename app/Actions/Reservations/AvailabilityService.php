@@ -5,8 +5,12 @@ namespace App\Actions\Reservations;
 use App\Actions\Settings\SettingsService;
 use App\Models\Blackout;
 use App\Models\Enums\ReservationStatus;
+use App\Models\RecurringBlackout;
 use App\Models\Reservation;
 use Carbon\CarbonImmutable;
+use Spatie\Period\Boundaries;
+use Spatie\Period\Period;
+use Spatie\Period\Precision;
 
 class AvailabilityService
 {
@@ -19,8 +23,11 @@ class AvailabilityService
     {
         $timezone = $this->settings->getString('timezone');
 
-        $startUtc = CarbonImmutable::parse($start, $timezone)->setTimezone('UTC');
-        $endUtc = CarbonImmutable::parse($end, $timezone)->setTimezone('UTC');
+        $startLocal = CarbonImmutable::parse($start, $timezone);
+        $endLocal = CarbonImmutable::parse($end, $timezone);
+
+        $startUtc = $startLocal->setTimezone('UTC');
+        $endUtc = $endLocal->setTimezone('UTC');
 
         $reservations = Reservation::query()
             ->approved()
@@ -83,10 +90,109 @@ class AvailabilityService
             ];
         }
 
+        foreach ($this->recurringBlackoutEventsForRange($startLocal, $endLocal, $timezone) as $event) {
+            $events[] = $event;
+        }
+
         usort($events, function (array $a, array $b): int {
             return strcmp((string) $a['start'], (string) $b['start']);
         });
 
         return $events;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function recurringBlackoutEventsForRange(CarbonImmutable $startLocal, CarbonImmutable $endLocal, string $timezone): array
+    {
+        $rangeStart = $startLocal->startOfDay();
+        $rangeEnd = $endLocal->subSecond()->startOfDay();
+
+        $weekdays = [];
+        for ($cursor = $rangeStart; $cursor->lessThanOrEqualTo($rangeEnd); $cursor = $cursor->addDay()) {
+            $weekdays[] = $cursor->dayOfWeek;
+        }
+
+        $weekdays = array_values(array_unique($weekdays));
+
+        $rangeStartDate = $rangeStart->toDateString();
+        $rangeEndDate = $rangeEnd->toDateString();
+
+        $rules = RecurringBlackout::query()
+            ->whereIn('weekday', $weekdays)
+            ->where(function ($query) use ($rangeEndDate) {
+                $query->whereNull('starts_on')->orWhere('starts_on', '<=', $rangeEndDate);
+            })
+            ->where(function ($query) use ($rangeStartDate) {
+                $query->whereNull('ends_on')->orWhere('ends_on', '>=', $rangeStartDate);
+            })
+            ->orderBy('weekday')
+            ->orderBy('starts_time')
+            ->get(['weekday', 'starts_time', 'ends_time', 'starts_on', 'ends_on', 'reason']);
+
+        if ($rules->isEmpty()) {
+            return [];
+        }
+
+        $rulesByWeekday = $rules->groupBy('weekday');
+
+        $requestedPeriod = Period::make($startLocal, $endLocal, Precision::MINUTE(), Boundaries::EXCLUDE_END());
+
+        $events = [];
+
+        for ($cursor = $rangeStart; $cursor->lessThanOrEqualTo($rangeEnd); $cursor = $cursor->addDay()) {
+            $weekdayRules = $rulesByWeekday->get($cursor->dayOfWeek);
+            if ($weekdayRules === null) {
+                continue;
+            }
+
+            $dateString = $cursor->toDateString();
+
+            foreach ($weekdayRules as $rule) {
+                if (! $this->recurringRuleIsActiveOnDate($rule, $dateString)) {
+                    continue;
+                }
+
+                $occurrenceStart = CarbonImmutable::parse($dateString.' '.$rule->starts_time, $timezone);
+                $occurrenceEnd = CarbonImmutable::parse($dateString.' '.$rule->ends_time, $timezone);
+
+                $occurrencePeriod = Period::make($occurrenceStart, $occurrenceEnd, Precision::MINUTE(), Boundaries::EXCLUDE_END());
+
+                if (! $requestedPeriod->overlapsWith($occurrencePeriod)) {
+                    continue;
+                }
+
+                $reason = is_string($rule->reason) && $rule->reason !== ''
+                    ? "Bloqueado - {$rule->reason}"
+                    : 'Bloqueado';
+
+                $events[] = [
+                    'title' => $reason,
+                    'start' => $occurrenceStart->toIso8601String(),
+                    'end' => $occurrenceEnd->toIso8601String(),
+                    'display' => 'background',
+                    'color' => '#64748b',
+                    'extendedProps' => [
+                        'type' => 'blackout',
+                    ],
+                ];
+            }
+        }
+
+        return $events;
+    }
+
+    private function recurringRuleIsActiveOnDate(RecurringBlackout $rule, string $dateString): bool
+    {
+        if ($rule->starts_on !== null && $dateString < $rule->starts_on->toDateString()) {
+            return false;
+        }
+
+        if ($rule->ends_on !== null && $dateString > $rule->ends_on->toDateString()) {
+            return false;
+        }
+
+        return true;
     }
 }

@@ -5,6 +5,7 @@ use App\Models\AuditEvent;
 use App\Models\Blackout;
 use App\Models\Faculty;
 use App\Models\ProfessionalSchool;
+use App\Models\RecurringBlackout;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -260,4 +261,36 @@ test('admins can create and delete blackouts (audited)', function () {
 
     expect(Blackout::query()->count())->toBe(0);
     expect(AuditEvent::query()->where('event_type', 'blackout.deleted')->where('metadata->blackout_id', $blackout->id)->exists())->toBeTrue();
+});
+
+test('admins can create and delete recurring blackouts (audited)', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->post(route('admin.blackouts.recurring.store'), [
+            'weekday' => 1,
+            'starts_time' => '14:00',
+            'ends_time' => '16:00',
+            'starts_on' => null,
+            'ends_on' => null,
+            'reason' => 'Mantenimiento semanal',
+        ])
+        ->assertRedirect();
+
+    $recurring = RecurringBlackout::query()->firstOrFail();
+
+    expect(AuditEvent::query()
+        ->where('event_type', 'recurring_blackout.created')
+        ->where('subject_id', $recurring->id)
+        ->exists())->toBeTrue();
+
+    $this->actingAs($admin)
+        ->delete(route('admin.blackouts.recurring.destroy', $recurring))
+        ->assertRedirect();
+
+    expect(RecurringBlackout::query()->count())->toBe(0);
+    expect(AuditEvent::query()
+        ->where('event_type', 'recurring_blackout.deleted')
+        ->where('metadata->recurring_blackout_id', $recurring->id)
+        ->exists())->toBeTrue();
 });

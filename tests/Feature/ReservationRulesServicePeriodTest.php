@@ -3,9 +3,11 @@
 use App\Actions\Reservations\ReservationRulesService;
 use App\Models\Blackout;
 use App\Models\Enums\ReservationStatus;
+use App\Models\RecurringBlackout;
 use App\Models\Reservation;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Validation\ValidationException;
 
 test('minute precision prevents false conflicts from seconds in stored reservations', function () {
@@ -52,6 +54,29 @@ test('blackouts block overlapping reservations', function () {
     Blackout::factory()->create([
         'starts_at' => $startsAtUtc->subMinutes(30),
         'ends_at' => $startsAtUtc->addMinutes(30),
+    ]);
+
+    expect(fn () => app(ReservationRulesService::class)->validateForCreation($user, $startsAtUtc, $endsAtUtc))
+        ->toThrow(ValidationException::class);
+});
+
+test('recurring blackouts block overlapping reservations', function () {
+    $timezone = 'America/Lima';
+
+    $user = User::factory()->create();
+
+    $startsAtLocal = CarbonImmutable::now($timezone)->addWeek()->startOfWeek(CarbonInterface::MONDAY)->setTime(14, 30);
+    $endsAtLocal = $startsAtLocal->addHour();
+
+    $startsAtUtc = $startsAtLocal->setTimezone('UTC');
+    $endsAtUtc = $endsAtLocal->setTimezone('UTC');
+
+    RecurringBlackout::factory()->create([
+        'weekday' => $startsAtLocal->dayOfWeek,
+        'starts_time' => '14:00',
+        'ends_time' => '16:00',
+        'starts_on' => null,
+        'ends_on' => null,
     ]);
 
     expect(fn () => app(ReservationRulesService::class)->validateForCreation($user, $startsAtUtc, $endsAtUtc))

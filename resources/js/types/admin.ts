@@ -69,6 +69,16 @@ export type Blackout = {
     reason?: string | null;
 };
 
+export type RecurringBlackout = {
+    id: number;
+    weekday: number;
+    starts_time: string;
+    ends_time: string;
+    starts_on?: string | null;
+    ends_on?: string | null;
+    reason?: string | null;
+};
+
 export type Faculty = {
     id: number;
     name: string;
