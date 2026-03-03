@@ -46,6 +46,7 @@ class SettingsIntegrityServiceProvider extends ServiceProvider
             'view:',
             'event:',
             'optimize',
+            'package:',
             'settings:sync',
             'wayfinder:',
             'test',

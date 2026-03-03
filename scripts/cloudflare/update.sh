@@ -108,6 +108,13 @@ ensure_chain() {
   "$ipt" "${wait_args[@]}" -N "$chain" 2>/dev/null || true
   "$ipt" "${wait_args[@]}" -F "$chain"
 
+  if [ "$base_chain" = "DOCKER-USER" ]; then
+    # Allow outbound traffic FROM Docker containers (docker0, br-* compose
+    # networks) so builds and containers can reach the internet on 80/443.
+    "$ipt" "${wait_args[@]}" -A "$chain" -i docker0 -j RETURN
+    "$ipt" "${wait_args[@]}" -A "$chain" -i br-+ -j RETURN
+  fi
+
   "$ipt" "${wait_args[@]}" -A "$chain" -p tcp -s "$localhost_cidr" -m multiport --dports 80,443 -j ACCEPT
   "$ipt" "${wait_args[@]}" -A "$chain" -p tcp -m set --match-set "$ipset_name" src -m multiport --dports 80,443 -j ACCEPT
   "$ipt" "${wait_args[@]}" -A "$chain" -p tcp -m multiport --dports 80,443 -j DROP
