@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Settings\SettingsService;
 use App\Models\Blackout;
+use App\Models\Enums\ReservationStatus;
 use App\Models\RecurringBlackout;
 use App\Models\Reservation;
 use App\Models\User;
@@ -35,6 +36,10 @@ class DashboardController extends Controller
         /** @var array<string, array{open: string, close: string}> $openingHours */
         $openingHours = $settings->get('opening_hours');
 
+        if ($user->hasPermissionTo('admin.panel.access')) {
+            return $this->adminDashboard($nowLocal, $nowUtc, $timezone, $openingHours);
+        }
+
         return Inertia::render('Dashboard', [
             'upcoming_reservations' => $this->upcomingReservations($user, $nowUtc),
             'active_count' => Reservation::query()
@@ -48,6 +53,115 @@ class DashboardController extends Controller
             'upcoming_blackouts' => $this->upcomingBlackouts($nowUtc, $nowLocal, $timezone),
             'todays_opening_hours' => $this->todaysOpeningHours($nowLocal, $openingHours),
         ]);
+    }
+
+    /**
+     * @param  array<string, array{open: string, close: string}>  $openingHours
+     */
+    private function adminDashboard(
+        CarbonImmutable $nowLocal,
+        CarbonImmutable $nowUtc,
+        string $timezone,
+        array $openingHours,
+    ): Response {
+        return Inertia::render('Dashboard', [
+            'is_admin' => true,
+            'pending_count' => Reservation::query()
+                ->where('status', ReservationStatus::Pending)
+                ->count(),
+            'todays_approved_count' => $this->todaysApprovedCount($nowLocal),
+            'todays_opening_hours' => $this->todaysOpeningHours($nowLocal, $openingHours),
+            'todays_reservations' => $this->todaysReservations($nowLocal),
+            'recent_decisions' => $this->recentDecisions(),
+            'week_at_a_glance' => $this->weekAtAGlance($nowLocal),
+            'upcoming_blackouts' => $this->upcomingBlackouts($nowUtc, $nowLocal, $timezone),
+        ]);
+    }
+
+    private function todaysApprovedCount(CarbonImmutable $nowLocal): int
+    {
+        $todayStartUtc = $nowLocal->startOfDay()->setTimezone('UTC');
+        $todayEndUtc = $nowLocal->endOfDay()->setTimezone('UTC');
+
+        return Reservation::query()
+            ->approved()
+            ->overlapping($todayStartUtc, $todayEndUtc)
+            ->count();
+    }
+
+    /**
+     * @return array<int, array{id: int, starts_at: string, ends_at: string, user_name: string, school_name: string|null}>
+     */
+    private function todaysReservations(CarbonImmutable $nowLocal): array
+    {
+        $todayStartUtc = $nowLocal->startOfDay()->setTimezone('UTC');
+        $todayEndUtc = $nowLocal->endOfDay()->setTimezone('UTC');
+
+        return Reservation::query()
+            ->approved()
+            ->overlapping($todayStartUtc, $todayEndUtc)
+            ->with(['user:id,first_name,last_name', 'professionalSchool:id,name'])
+            ->orderBy('starts_at')
+            ->limit(6)
+            ->get(['id', 'starts_at', 'ends_at', 'user_id', 'professional_school_id'])
+            ->map(fn (Reservation $r): array => [
+                'id' => $r->id,
+                'starts_at' => $r->starts_at->toISOString(),
+                'ends_at' => $r->ends_at->toISOString(),
+                'user_name' => trim("{$r->user->first_name} {$r->user->last_name}"),
+                'school_name' => $r->professionalSchool?->name,
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{id: int, status: string, decided_at: string, user_name: string, decider_name: string|null}>
+     */
+    private function recentDecisions(): array
+    {
+        return Reservation::query()
+            ->whereNotNull('decided_at')
+            ->with(['user:id,first_name,last_name', 'decider:id,first_name,last_name'])
+            ->latest('decided_at')
+            ->limit(5)
+            ->get(['id', 'status', 'decided_at', 'user_id', 'decided_by'])
+            ->map(fn (Reservation $r): array => [
+                'id' => $r->id,
+                'status' => $r->status->value,
+                'decided_at' => $r->decided_at->toISOString(),
+                'user_name' => trim("{$r->user->first_name} {$r->user->last_name}"),
+                'decider_name' => $r->decider
+                    ? trim("{$r->decider->first_name} {$r->decider->last_name}")
+                    : null,
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{label: string, date: string, count: int}>
+     */
+    private function weekAtAGlance(CarbonImmutable $nowLocal): array
+    {
+        $weekStart = $nowLocal->startOfWeek(CarbonInterface::MONDAY);
+        $dayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+        $days = [];
+
+        for ($i = 0; $i < 7; $i++) {
+            $dayLocal = $weekStart->addDays($i);
+            $dayStartUtc = $dayLocal->startOfDay()->setTimezone('UTC');
+            $dayEndUtc = $dayLocal->endOfDay()->setTimezone('UTC');
+
+            $days[] = [
+                'label' => $dayLabels[$i],
+                'date' => $dayLocal->toDateString(),
+                'count' => Reservation::query()
+                    ->approved()
+                    ->overlapping($dayStartUtc, $dayEndUtc)
+                    ->count(),
+            ];
+        }
+
+        return $days;
     }
 
     /**

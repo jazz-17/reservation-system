@@ -36,6 +36,8 @@ test('dashboard returns correct props for student', function () {
         ->has('recent_activity')
         ->has('upcoming_blackouts')
         ->has('todays_opening_hours')
+        ->missing('is_admin')
+        ->missing('pending_count')
     );
 });
 
@@ -153,5 +155,143 @@ test('dashboard shows upcoming reservations sorted by start time', function () {
         ->has('upcoming_reservations', 2)
         ->where('upcoming_reservations.0.id', $sooner->id)
         ->where('upcoming_reservations.1.id', $later->id)
+    );
+});
+
+// ── Admin Dashboard ──────────────────────────────────────────────
+
+test('admin dashboard returns admin-specific props', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $response = $this->get(route('dashboard'));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Dashboard')
+        ->where('is_admin', true)
+        ->has('pending_count')
+        ->has('todays_approved_count')
+        ->has('todays_opening_hours')
+        ->has('todays_reservations')
+        ->has('recent_decisions')
+        ->has('week_at_a_glance', 7)
+        ->has('upcoming_blackouts')
+        ->missing('upcoming_reservations')
+        ->missing('active_count')
+        ->missing('weekly_quota_used')
+    );
+});
+
+test('operator dashboard returns admin-specific props', function () {
+    $operator = User::factory()->operator()->create();
+    $this->actingAs($operator);
+
+    $response = $this->get(route('dashboard'));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('is_admin', true)
+        ->has('pending_count')
+        ->has('todays_approved_count')
+    );
+});
+
+test('admin dashboard shows correct pending count', function () {
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->create();
+    $this->actingAs($admin);
+
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->addDay()->setTime(10, 0)->setTimezone('UTC');
+
+    Reservation::factory()->count(3)->create([
+        'user_id' => $student->id,
+        'status' => ReservationStatus::Pending,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school_id' => $student->professional_school_id,
+        'base_year' => $student->base_year,
+    ]);
+
+    Reservation::factory()->create([
+        'user_id' => $student->id,
+        'status' => ReservationStatus::Approved,
+        'starts_at' => $startsAtUtc->addHours(2),
+        'ends_at' => $startsAtUtc->addHours(3),
+        'professional_school_id' => $student->professional_school_id,
+        'base_year' => $student->base_year,
+    ]);
+
+    $response = $this->get(route('dashboard'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('pending_count', 3)
+    );
+});
+
+test('admin dashboard shows todays approved reservations with user info', function () {
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->create([
+        'first_name' => 'Maria',
+        'last_name' => 'Garcia',
+    ]);
+    $this->actingAs($admin);
+
+    $todayLocal = CarbonImmutable::now('America/Lima');
+    $startsAtUtc = $todayLocal->setTime(10, 0)->setTimezone('UTC');
+
+    Reservation::factory()->create([
+        'user_id' => $student->id,
+        'status' => ReservationStatus::Approved,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school_id' => $student->professional_school_id,
+        'base_year' => $student->base_year,
+    ]);
+
+    $response = $this->get(route('dashboard'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('todays_reservations', 1)
+        ->where('todays_reservations.0.user_name', 'Maria Garcia')
+    );
+});
+
+test('admin dashboard shows recent decisions', function () {
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->create();
+    $this->actingAs($admin);
+
+    $startsAtUtc = CarbonImmutable::now('UTC')->addDay()->setTime(10, 0);
+
+    Reservation::factory()->create([
+        'user_id' => $student->id,
+        'status' => ReservationStatus::Approved,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school_id' => $student->professional_school_id,
+        'base_year' => $student->base_year,
+        'decided_by' => $admin->id,
+        'decided_at' => CarbonImmutable::now('UTC'),
+    ]);
+
+    $response = $this->get(route('dashboard'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('recent_decisions', 1)
+        ->where('recent_decisions.0.status', 'approved')
+    );
+});
+
+test('admin dashboard week at a glance has seven days', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $response = $this->get(route('dashboard'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('week_at_a_glance', 7)
+        ->where('week_at_a_glance.0.label', 'Lun')
+        ->where('week_at_a_glance.6.label', 'Dom')
     );
 });
