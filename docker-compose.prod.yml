@@ -33,6 +33,8 @@ services:
 
   postgres:
     image: postgres:16-alpine@sha256:97ff59a4e30e08d1c11bdcd9455e7832368c0572b576c9092cde2df4ae5552a3
+    ports:
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_DB: ${DB_DATABASE:-reservation_system}
       POSTGRES_USER: ${DB_USERNAME:-postgres}
