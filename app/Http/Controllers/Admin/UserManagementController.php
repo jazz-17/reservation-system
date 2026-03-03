@@ -84,7 +84,7 @@ class UserManagementController extends Controller
             'filters' => [
                 'search' => $search,
             ],
-            'available_roles' => ['admin', 'operator', 'auditor', 'student'],
+            'available_roles' => ['admin', 'operator', 'student'],
         ]);
     }
 

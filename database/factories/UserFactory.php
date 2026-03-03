@@ -91,11 +91,4 @@ class UserFactory extends Factory
             $user->syncRoles(['operator']);
         });
     }
-
-    public function auditor(): static
-    {
-        return $this->afterCreating(function (User $user): void {
-            $user->syncRoles(['auditor']);
-        });
-    }
 }

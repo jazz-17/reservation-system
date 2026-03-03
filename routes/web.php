@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\AdminHistoryController;
 use App\Http\Controllers\Api\AdminRequestsController;
 use App\Http\Controllers\Api\PublicAvailabilityController;
 use App\Http\Controllers\Api\StudentReservationsController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PublicCalendarController;
 use App\Http\Controllers\ReservationPdfController;
 use App\Http\Controllers\Student\CalendarController;
@@ -24,9 +25,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/calendario')->name('home');
 
-Route::get('dashboard', function () {
-    return \Inertia\Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('dashboard', DashboardController::class)
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::get('calendario', PublicCalendarController::class)->name('calendar.public');
 

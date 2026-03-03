@@ -113,10 +113,10 @@ const selectedRoles = (user: ManagedUser) => {
 };
 
 const hasStaffRole = (roles: string[]): boolean =>
-    roles.some((r) => ['admin', 'operator', 'auditor'].includes(r));
+    roles.some((r) => ['admin', 'operator'].includes(r));
 
 const roleHelpText = computed(() => {
-    return 'Roles fijos. Si asignas un rol staff (admin/operator/auditor), el rol student se removerá automáticamente.';
+    return 'Roles fijos. Si asignas un rol staff (admin/operator), el rol student se removerá automáticamente.';
 });
 
 const eventTypeLabels: Record<string, string> = {

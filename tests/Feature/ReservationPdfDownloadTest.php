@@ -51,9 +51,9 @@ test('student cannot download another student reservation pdf', function () {
         ->assertForbidden();
 });
 
-test('auditor can download another student reservation pdf', function () {
+test('operator can download another student reservation pdf', function () {
     $owner = User::factory()->create();
-    $auditor = User::factory()->auditor()->create();
+    $operator = User::factory()->operator()->create();
 
     $startsAtUtc = CarbonImmutable::now('America/Lima')->addDay()->setTime(10, 0)->setTimezone('UTC');
     $reservation = Reservation::factory()->create([
@@ -71,7 +71,7 @@ test('auditor can download another student reservation pdf', function () {
         ->andReturn(response('pdf-content', 200, ['Content-Type' => 'application/pdf']));
     Pdf::shouldReceive('loadView')->once()->andReturn($pdfDocument);
 
-    $this->actingAs($auditor)
+    $this->actingAs($operator)
         ->get(route('reservations.pdf.show', $reservation))
         ->assertOk()
         ->assertHeader('content-type', 'application/pdf');

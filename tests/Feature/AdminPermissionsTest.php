@@ -35,15 +35,10 @@ test('operators can decide requests but cannot manage settings', function () {
         ->assertForbidden();
 });
 
-test('auditors can view audit but cannot decide requests', function () {
-    $auditor = User::factory()->auditor()->create();
-    $reservation = Reservation::factory()->create();
+test('operators can view audit log', function () {
+    $operator = User::factory()->operator()->create();
 
-    $this->actingAs($auditor)
+    $this->actingAs($operator)
         ->get(route('admin.audit.index'))
         ->assertOk();
-
-    $this->actingAs($auditor)
-        ->post(route('admin.requests.approve', $reservation))
-        ->assertForbidden();
 });

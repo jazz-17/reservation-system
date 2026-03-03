@@ -28,7 +28,7 @@ class UpdateUserRolesRequest extends FormRequest
             'roles.*' => [
                 'required',
                 'string',
-                Rule::in(['admin', 'operator', 'auditor', 'student']),
+                Rule::in(['admin', 'operator', 'student']),
             ],
         ];
     }
