@@ -7,6 +7,7 @@ temp
 /public/storage
 /storage/*.key
 /docker/nginx/ssl/
+/cloudflare/nginx-realip.conf
 /storage/pail
 /resources/js/actions
 /resources/js/routes

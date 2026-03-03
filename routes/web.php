@@ -150,7 +150,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'permiss
 });
 
 Route::prefix('api')->name('api.')->group(function () {
-    Route::get('public/availability', PublicAvailabilityController::class)->name('public.availability');
+    Route::get('public/availability', PublicAvailabilityController::class)
+        ->middleware('throttle:public-availability')
+        ->name('public.availability');
 
     Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('student/reservations', StudentReservationsController::class)->name('student.reservations');
@@ -169,4 +171,5 @@ Route::prefix('api')->name('api.')->group(function () {
     });
 });
 
+require __DIR__.'/fortify.php';
 require __DIR__.'/settings.php';

@@ -25,6 +25,8 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        Fortify::ignoreRoutes();
+
         $this->app->singleton(RegisterResponseContract::class, RegisterResponse::class);
     }
 
@@ -120,6 +122,24 @@ class FortifyServiceProvider extends ServiceProvider
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
+        });
+
+        RateLimiter::for('register', function (Request $request) {
+            return [
+                Limit::perMinute((int) config('rate-limiting.register.per_ip_per_minute'))
+                    ->by('ip:'.$request->ip()),
+                Limit::perMinute((int) config('rate-limiting.register.per_email_per_minute'))
+                    ->by('email:'.Str::lower((string) $request->input('email'))),
+            ];
+        });
+
+        RateLimiter::for('forgot-password', function (Request $request) {
+            return [
+                Limit::perMinute((int) config('rate-limiting.forgot_password.per_ip_per_minute'))
+                    ->by('ip:'.$request->ip()),
+                Limit::perMinute((int) config('rate-limiting.forgot_password.per_email_per_minute'))
+                    ->by('email:'.Str::lower((string) $request->input('email'))),
+            ];
         });
     }
 }

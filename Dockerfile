@@ -151,4 +151,5 @@ CMD ["php-fpm"]
 FROM nginx:alpine@sha256:1d13701a5f9f3fb01aaa88cef2344d65b6b5bf6b7d9fa4cf0dca557a8d7702ba AS nginx
 
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY docker/nginx/cloudflare-realip.conf /etc/nginx/conf.d/10-cloudflare-realip.conf
 COPY --from=prod /var/www/html/public /var/www/html/public

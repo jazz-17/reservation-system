@@ -26,6 +26,7 @@ services:
       - "443:443"
     volumes:
       - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - "${CLOUDFLARE_NGINX_REALIP_PATH:-/srv/reservation-system/cloudflare/nginx-realip.conf}:/etc/nginx/conf.d/10-cloudflare-realip.conf:ro"
     depends_on:
       - app
     restart: unless-stopped

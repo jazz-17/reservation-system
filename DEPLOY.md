@@ -21,23 +21,30 @@ Oracle Cloud blocks all ports by default at **two independent layers**. Both mus
 
 **1. Cloud Security List** (Oracle Console → Networking → VCN → Security Lists → Default):
 
-Add two Ingress Rules:
+Add two Ingress Rules (Cloud Security List). If Oracle limits the number of CIDR rules you can add, keep these open and enforce Cloudflare-only at the OS firewall (next step):
 
 | Stateless | Source CIDR | Protocol | Dest. Port | Description |
 |-----------|-------------|----------|------------|-------------|
-| No | 0.0.0.0/0 | TCP | 80 | HTTP |
-| No | 0.0.0.0/0 | TCP | 443 | HTTPS |
+| No | 0.0.0.0/0 | TCP | 80 | HTTP (will be restricted by OS firewall) |
+| No | 0.0.0.0/0 | TCP | 443 | HTTPS (will be restricted by OS firewall) |
 
-**2. OS iptables** (inside the VPS):
+**2. OS firewall (Cloudflare-only)** (inside the VPS):
 
 ```bash
-# Allow HTTP and HTTPS before the default REJECT rule
-sudo iptables -I INPUT 5 -p tcp --dport 80 -j ACCEPT
-sudo iptables -I INPUT 6 -p tcp --dport 443 -j ACCEPT
+# Install dependencies (Debian/Ubuntu)
+sudo apt-get update
+sudo apt-get install -y ipset ipset-persistent netfilter-persistent
+
+# Run the Cloudflare allowlist updater (updates ipset + iptables and generates nginx real-ip config)
+cd /srv/reservation-system
+sudo bash scripts/cloudflare/update.sh
 
 # Persist rules across reboots
 sudo netfilter-persistent save
 ```
+
+This locks ports **80/443** to Cloudflare IP ranges. Direct-to-origin requests (curling the VPS IP with `Host: reservafisi.org.pe`) will be blocked.
+When Docker is used for port publishing, rules are attached to `DOCKER-USER` (fallback: `INPUT`) so they apply to container traffic as well.
 
 ---
 
@@ -48,8 +55,10 @@ sudo netfilter-persistent save
 curl -fsSL https://get.docker.com | sh
 
 # 2. Clone the repo
-git clone https://github.com/your-user/reservation-system.git
-cd reservation-system
+sudo mkdir -p /srv
+sudo chown -R "$USER":"$USER" /srv
+git clone https://github.com/your-user/reservation-system.git /srv/reservation-system
+cd /srv/reservation-system
 
 # 3. Create .env.production (see .env.example)
 #    Key values to set:
@@ -73,6 +82,10 @@ cd reservation-system
 #    so queued jobs can generate/read PDFs.
 sudo mkdir -p /srv/reservation-system/storage
 sudo chown -R 1000:1000 /srv/reservation-system/storage
+
+#    IMPORTANT: run the Cloudflare updater once before the first `docker compose up`
+#    so the bind-mounted real-ip config exists (see `docs/origin-hardening.md`).
+sudo bash scripts/cloudflare/update.sh
 
 #    IMPORTANT: `docker-compose.prod.yml` uses ${DB_PASSWORD} for Postgres init.
 #    Use --env-file so Compose reads DB_PASSWORD (and other variables) from .env.production.

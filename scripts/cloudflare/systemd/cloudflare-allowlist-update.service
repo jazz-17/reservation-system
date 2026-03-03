@@ -1,0 +1,10 @@
+[Unit]
+Description=Update Cloudflare origin allowlist (ipset + nginx real-ip)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/reservation-system
+ExecStart=/usr/bin/bash /srv/reservation-system/scripts/cloudflare/update.sh
+
