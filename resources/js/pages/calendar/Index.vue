@@ -11,6 +11,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import AppCalendar from '@/components/AppCalendar.vue';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useEventTooltip } from '@/composables/useEventTooltip';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { APP_TIMEZONE } from '@/lib/formatters';
 import { fetchJson } from '@/lib/http';
@@ -27,6 +28,7 @@ type CalendarEvent = EventInput & {
 
 const isLoading = ref(false);
 const loadError = ref(false);
+const { tooltip, showTooltip, hideTooltip } = useEventTooltip();
 
 const calendarOptions = computed<CalendarOptions>(() => ({
     plugins: [dayGridPlugin, interactionPlugin],
@@ -51,6 +53,8 @@ const calendarOptions = computed<CalendarOptions>(() => ({
         }
         return [];
     },
+    eventMouseEnter: showTooltip,
+    eventMouseLeave: hideTooltip,
     dateClick: (info) => {
         router.visit(
             reservationsRoutes.create.url({
@@ -128,6 +132,24 @@ const calendarOptions = computed<CalendarOptions>(() => ({
             No se pudo cargar el calendario.
         </div>
 
+        <Teleport to="body">
+            <Transition name="tooltip-fade">
+                <div
+                    v-if="tooltip.visible"
+                    class="event-tooltip"
+                    :style="{
+                        top: `${tooltip.top}px`,
+                        left: `${tooltip.left}px`,
+                    }"
+                >
+                    <span class="font-medium">{{ tooltip.label }}</span>
+                    <span v-if="tooltip.time" class="text-background/70">
+                        {{ tooltip.time }}
+                    </span>
+                </div>
+            </Transition>
+        </Teleport>
+
         <AppCalendar :options="calendarOptions" clickable :loading="isLoading">
             <template #loading>
                 <div class="flex h-full flex-col gap-0 bg-card">
@@ -170,3 +192,41 @@ const calendarOptions = computed<CalendarOptions>(() => ({
         </AppCalendar>
     </div>
 </template>
+
+<style scoped>
+.event-tooltip {
+    position: absolute;
+    z-index: 50;
+    transform: translateX(-50%) translateY(-100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    border-radius: 0.375rem;
+    background: var(--foreground);
+    color: var(--background);
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.tooltip-fade-enter-active {
+    transition:
+        opacity 0.15s ease,
+        transform 0.15s ease;
+}
+
+.tooltip-fade-leave-active {
+    transition:
+        opacity 0.1s ease,
+        transform 0.1s ease;
+}
+
+.tooltip-fade-enter-from,
+.tooltip-fade-leave-to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-100%) scale(0.95);
+}
+</style>
