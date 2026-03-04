@@ -42,6 +42,19 @@ test('admin requests endpoint paginates results', function () {
     expect($page2->json('next_page_url'))->toBeNull();
 });
 
+test('admin requests endpoint includes created_at timestamp', function () {
+    $admin = User::factory()->admin()->create();
+
+    Reservation::factory()->create();
+
+    $response = $this->actingAs($admin)
+        ->getJson(route('api.admin.requests'))
+        ->assertOk();
+
+    expect($response->json('data.0'))->toHaveKey('created_at');
+    expect($response->json('data.0.created_at'))->not->toBeNull();
+});
+
 test('admin requests endpoint only returns pending reservations', function () {
     $admin = User::factory()->admin()->create();
 

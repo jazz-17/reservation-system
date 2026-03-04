@@ -85,14 +85,14 @@ const derivedBaseLabel = computed(() => {
                 class="mt-4 grid gap-3"
             >
                 <div class="grid gap-1">
-                    <Label for="email">Correo institucional</Label>
+                    <Label for="email">Correo electrónico</Label>
                     <Input
                         id="email"
                         name="email"
                         type="email"
                         required
                         :default-value="props.entry.email"
-                        placeholder="usuario@unmsm.edu.pe"
+                        placeholder="tu@correo.com"
                     />
                     <InputError :message="errors.email" />
                 </div>

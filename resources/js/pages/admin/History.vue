@@ -105,6 +105,7 @@ const hasPrevPage = computed(() => paginatedData.value?.prev_page_url != null);
                     <TableHead>Estado</TableHead>
                     <TableHead>Inicio</TableHead>
                     <TableHead>Fin</TableHead>
+                    <TableHead>Creada</TableHead>
                     <TableHead>Estudiante</TableHead>
                     <TableHead>Escuela/Base</TableHead>
                     <TableHead />
@@ -113,6 +114,7 @@ const hasPrevPage = computed(() => paginatedData.value?.prev_page_url != null);
             <TableBody>
                 <TableRow v-for="i in 5" :key="i">
                     <TableCell><Skeleton class="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton class="h-4 w-28" /></TableCell>
                     <TableCell><Skeleton class="h-4 w-28" /></TableCell>
                     <TableCell><Skeleton class="h-4 w-28" /></TableCell>
                     <TableCell>
@@ -140,6 +142,7 @@ const hasPrevPage = computed(() => paginatedData.value?.prev_page_url != null);
                     <TableHead>Estado</TableHead>
                     <TableHead>Inicio</TableHead>
                     <TableHead>Fin</TableHead>
+                    <TableHead>Creada</TableHead>
                     <TableHead>Estudiante</TableHead>
                     <TableHead>Escuela/Base</TableHead>
                     <TableHead />
@@ -155,6 +158,22 @@ const hasPrevPage = computed(() => paginatedData.value?.prev_page_url != null);
                     </TableCell>
                     <TableCell>
                         {{ formatDateTime(r.ends_at) }}
+                    </TableCell>
+                    <TableCell>
+                        {{ formatDateTime(r.created_at) }}
+                        <template v-if="r.decided_at">
+                            <br />
+                            <span class="text-xs text-muted-foreground">
+                                {{ r.status === 'approved' ? 'Aprobada' : 'Rechazada' }}:
+                                {{ formatDateTime(r.decided_at) }}
+                            </span>
+                        </template>
+                        <template v-else-if="r.cancelled_at">
+                            <br />
+                            <span class="text-xs text-muted-foreground">
+                                Cancelada: {{ formatDateTime(r.cancelled_at) }}
+                            </span>
+                        </template>
                     </TableCell>
                     <TableCell>
                         {{ r.user.name }}<br />
@@ -180,7 +199,7 @@ const hasPrevPage = computed(() => paginatedData.value?.prev_page_url != null);
                 </TableRow>
                 <TableEmpty
                     v-if="items.length === 0 && !hasPrevPage"
-                    :colspan="6"
+                    :colspan="7"
                 >
                     Sin resultados.
                 </TableEmpty>

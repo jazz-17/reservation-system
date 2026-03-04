@@ -19,6 +19,7 @@ class ReservationStatusMail extends Mailable
     public function __construct(
         public Reservation $reservation,
         public string $event,
+        public string $recipientKind = 'student',
     ) {}
 
     /**

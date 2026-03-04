@@ -71,7 +71,7 @@ const derivedBaseLabel = computed(() => {
     <div class="flex flex-col gap-4 p-4">
         <AdminPageHeader
             title="Agregar correo"
-            subtitle="El alumno se registra solo con su correo institucional. La escuela y la base se asignan desde esta allow-list."
+            subtitle="El alumno se registra solo con su correo autorizado. La escuela y la base se asignan desde esta allow-list."
         />
 
         <AdminSection title="Nuevo correo">
@@ -81,13 +81,13 @@ const derivedBaseLabel = computed(() => {
                 class="mt-4 grid gap-3"
             >
                 <div class="grid gap-1">
-                    <Label for="email">Correo institucional</Label>
+                    <Label for="email">Correo electrónico</Label>
                     <Input
                         id="email"
                         name="email"
                         type="email"
                         required
-                        placeholder="usuario@unmsm.edu.pe"
+                        placeholder="tu@correo.com"
                     />
                     <InputError :message="errors.email" />
                 </div>

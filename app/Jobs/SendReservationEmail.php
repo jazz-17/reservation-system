@@ -29,7 +29,7 @@ class SendReservationEmail implements ShouldQueue
     public function handle(): void
     {
         $artifact = ReservationArtifact::query()
-            ->with(['reservation.user'])
+            ->with(['reservation.user', 'reservation.professionalSchool.faculty'])
             ->find($this->artifactId);
 
         if ($artifact === null || ! in_array($artifact->kind, [ReservationArtifactKind::EmailAdmin, ReservationArtifactKind::EmailStudent], true)) {
@@ -62,12 +62,15 @@ class SendReservationEmail implements ShouldQueue
 
             MailDeliveryState::reset();
 
+            $recipientKind = $artifact->kind === ReservationArtifactKind::EmailAdmin ? 'admin' : 'student';
+
             Mail::to($to)
                 ->cc($cc)
                 ->bcc($bcc)
                 ->send(new ReservationStatusMail(
                     reservation: $reservation,
                     event: $event,
+                    recipientKind: $recipientKind,
                 ));
 
             if (MailDeliveryState::wasSuppressed()) {

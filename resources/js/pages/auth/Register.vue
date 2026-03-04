@@ -16,7 +16,7 @@ defineOptions({ layout: false });
 <template>
     <AuthBase
         title="Crear cuenta"
-        description="Regístrate con tu correo institucional"
+        description="Regístrate con tu correo autorizado"
     >
         <Head title="Registro" />
 
@@ -79,7 +79,7 @@ defineOptions({ layout: false });
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="email">Correo institucional</Label>
+                    <Label for="email">Correo electrónico</Label>
                     <Input
                         id="email"
                         type="email"
@@ -87,7 +87,7 @@ defineOptions({ layout: false });
                         :tabindex="4"
                         autocomplete="email"
                         name="email"
-                        placeholder="usuario@unmsm.edu.pe"
+                        placeholder="tu@correo.com"
                     />
                     <InputError :message="errors.email" />
                 </div>

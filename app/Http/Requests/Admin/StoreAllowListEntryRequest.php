@@ -53,13 +53,6 @@ class StoreAllowListEntryRequest extends FormRequest
                 'string',
                 'email',
                 'max:255',
-                function (string $attribute, mixed $value, \Closure $fail): void {
-                    $email = Str::lower((string) $value);
-
-                    if (! Str::endsWith($email, '@unmsm.edu.pe')) {
-                        $fail('Usa un correo institucional @unmsm.edu.pe.');
-                    }
-                },
             ],
             'professional_school_id' => [
                 'required',

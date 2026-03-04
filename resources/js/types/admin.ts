@@ -40,6 +40,9 @@ export type AdminReservation = {
     starts_at: string;
     ends_at: string;
     status: ReservationStatus;
+    created_at: string;
+    decided_at: string | null;
+    cancelled_at: string | null;
     user: AdminUser;
 };
 

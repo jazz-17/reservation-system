@@ -42,6 +42,30 @@ test('admin history endpoint paginates results', function () {
     expect($page2->json('next_page_url'))->toBeNull();
 });
 
+test('admin history endpoint includes timestamp fields', function () {
+    $admin = User::factory()->admin()->create();
+
+    Reservation::factory()->create();
+    Reservation::factory()->create([
+        'status' => ReservationStatus::Approved,
+        'decided_at' => now(),
+        'decided_by' => $admin->id,
+    ]);
+    Reservation::factory()->create([
+        'status' => ReservationStatus::Cancelled,
+        'cancelled_at' => now(),
+        'cancelled_by' => $admin->id,
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->getJson(route('api.admin.history'))
+        ->assertOk();
+
+    foreach ($response->json('data') as $item) {
+        expect($item)->toHaveKeys(['created_at', 'decided_at', 'cancelled_at']);
+    }
+});
+
 test('admin history endpoint filters by status with pagination', function () {
     $admin = User::factory()->admin()->create();
 

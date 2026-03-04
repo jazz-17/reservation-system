@@ -41,12 +41,6 @@ class CreateNewUser implements CreatesNewUsers
                 function (string $attribute, mixed $value, \Closure $fail): void {
                     $email = Str::lower((string) $value);
 
-                    if (! Str::endsWith($email, '@unmsm.edu.pe')) {
-                        $fail('Usa tu correo institucional @unmsm.edu.pe.');
-
-                        return;
-                    }
-
                     if (! AllowListEntry::query()->where('email', $email)->exists()) {
                         $fail('Este correo no está autorizado para registrarse.');
                     }
@@ -58,7 +52,7 @@ class CreateNewUser implements CreatesNewUsers
         $entry = null;
         $school = null;
         $validator->after(function ($validator) use ($normalizedEmail, &$entry, &$school): void {
-            if ($normalizedEmail === '' || ! Str::endsWith($normalizedEmail, '@unmsm.edu.pe')) {
+            if ($normalizedEmail === '') {
                 return;
             }
 

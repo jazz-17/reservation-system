@@ -49,13 +49,6 @@ class UpdateAllowListEntryRequest extends FormRequest
                 'email',
                 'max:255',
                 Rule::unique('allow_list_entries', 'email')->ignore($this->route('allow_list_entry')),
-                function (string $attribute, mixed $value, \Closure $fail): void {
-                    $email = Str::lower((string) $value);
-
-                    if (! Str::endsWith($email, '@unmsm.edu.pe')) {
-                        $fail('Usa un correo institucional @unmsm.edu.pe.');
-                    }
-                },
             ],
             'professional_school_id' => [
                 'required',

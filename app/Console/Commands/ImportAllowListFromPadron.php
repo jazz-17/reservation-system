@@ -168,12 +168,6 @@ class ImportAllowListFromPadron extends Command
                     continue;
                 }
 
-                if (! Str::endsWith($email, '@unmsm.edu.pe')) {
-                    $invalidRows[] = ['row' => $rowNumber, 'value' => $emailRaw];
-
-                    continue;
-                }
-
                 if ($studentCode === null || $derivedBaseYear === null) {
                     $invalidRows[] = ['row' => $rowNumber, 'value' => "{$emailRaw} ({$studentCodeRaw})"];
 

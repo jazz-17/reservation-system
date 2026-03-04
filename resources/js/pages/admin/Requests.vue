@@ -131,6 +131,9 @@ const decide = (
                             {{ formatDateTime(r.starts_at) }} —
                             {{ formatDateTime(r.ends_at) }}
                         </div>
+                        <div class="text-xs text-muted-foreground">
+                            Creada: {{ formatDateTime(r.created_at) }}
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-2">

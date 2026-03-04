@@ -984,6 +984,58 @@ test('email sending job sends the mailable and marks the artifact as sent', func
 
     Mail::assertSent(ReservationStatusMail::class, function (ReservationStatusMail $mail) use ($reservation): bool {
         return $mail->reservation->id === $reservation->id
-            && $mail->event === 'approved';
+            && $mail->event === 'approved'
+            && $mail->recipientKind === 'student';
+    });
+});
+
+test('email sending job passes admin recipient kind for admin artifacts', function () {
+    Mail::fake();
+
+    $reservation = Reservation::factory()->create();
+
+    $artifact = ReservationArtifact::factory()->create([
+        'reservation_id' => $reservation->id,
+        'kind' => ReservationArtifactKind::EmailAdmin,
+        'status' => ReservationArtifactStatus::Pending,
+        'payload' => [
+            'event' => 'pending',
+            'to' => ['admin@example.edu'],
+            'cc' => [],
+            'bcc' => [],
+        ],
+    ]);
+
+    (new SendReservationEmail($artifact->id))->handle();
+
+    Mail::assertSent(ReservationStatusMail::class, function (ReservationStatusMail $mail) use ($reservation): bool {
+        return $mail->reservation->id === $reservation->id
+            && $mail->event === 'pending'
+            && $mail->recipientKind === 'admin';
+    });
+});
+
+test('email sending job eager loads professional school and faculty', function () {
+    Mail::fake();
+
+    $reservation = Reservation::factory()->create();
+
+    $artifact = ReservationArtifact::factory()->create([
+        'reservation_id' => $reservation->id,
+        'kind' => ReservationArtifactKind::EmailAdmin,
+        'status' => ReservationArtifactStatus::Pending,
+        'payload' => [
+            'event' => 'pending',
+            'to' => ['admin@example.edu'],
+            'cc' => [],
+            'bcc' => [],
+        ],
+    ]);
+
+    (new SendReservationEmail($artifact->id))->handle();
+
+    Mail::assertSent(ReservationStatusMail::class, function (ReservationStatusMail $mail): bool {
+        return $mail->reservation->relationLoaded('professionalSchool')
+            && $mail->reservation->professionalSchool?->relationLoaded('faculty');
     });
 });
