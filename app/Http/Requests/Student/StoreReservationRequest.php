@@ -27,4 +27,18 @@ class StoreReservationRequest extends FormRequest
             'ends_at' => ['required', 'date', 'after:starts_at'],
         ];
     }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'starts_at.required' => 'La hora de inicio es obligatoria.',
+            'starts_at.date' => 'La hora de inicio no es una fecha válida.',
+            'ends_at.required' => 'La hora de fin es obligatoria.',
+            'ends_at.date' => 'La hora de fin no es una fecha válida.',
+            'ends_at.after' => 'La hora de fin debe ser posterior a la hora de inicio.',
+        ];
+    }
 }

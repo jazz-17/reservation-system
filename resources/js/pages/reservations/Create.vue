@@ -13,6 +13,7 @@ import AppCalendar from '@/components/AppCalendar.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { APP_TIMEZONE, formatYmdInTimeZone } from '@/lib/formatters';
 import { fetchJson } from '@/lib/http';
@@ -34,6 +35,8 @@ const props = defineProps<{
     opening_hours: OpeningHours | null;
     min_duration_minutes: number;
     max_duration_minutes: number;
+    lead_time_min_hours: number;
+    lead_time_max_days: number;
 }>();
 
 useBreadcrumbs([
@@ -60,6 +63,21 @@ const selectedDate = ref<string>(
     dateFromQuery.value ?? toDateInput(new Date()),
 );
 const initialCalendarDate = selectedDate.value;
+
+const dateMin = computed((): string => {
+    const earliest = new Date(
+        Date.now() + props.lead_time_min_hours * 60 * 60 * 1000,
+    );
+    return formatYmdInTimeZone(earliest);
+});
+
+const dateMax = computed((): string => {
+    const latest = new Date(
+        Date.now() + props.lead_time_max_days * 24 * 60 * 60 * 1000,
+    );
+    return formatYmdInTimeZone(latest);
+});
+
 const startTime = ref<string>('');
 const endTime = ref<string>('');
 
@@ -98,6 +116,55 @@ const timeToMinutes = (value: string): number | null => {
     }
 
     return hours * 60 + minutes;
+};
+
+const addMinutesToTime = (time: string, minutes: number): string | null => {
+    const total = timeToMinutes(time);
+    if (total === null) return null;
+    const result = total + minutes;
+    if (result < 0 || result >= 24 * 60) return null;
+    const hh = String(Math.floor(result / 60)).padStart(2, '0');
+    const mm = String(result % 60).padStart(2, '0');
+    return `${hh}:${mm}`;
+};
+
+/** America/Lima is fixed UTC-5 (no DST). */
+const makeDateInLima = (ymd: string, hm: string): Date | null => {
+    const dateMatch = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const timeMatch = hm.match(/^(\d{2}):(\d{2})$/);
+    if (!dateMatch || !timeMatch) return null;
+
+    return new Date(
+        Date.UTC(
+            Number(dateMatch[1]),
+            Number(dateMatch[2]) - 1,
+            Number(dateMatch[3]),
+            Number(timeMatch[1]) + 5,
+            Number(timeMatch[2]),
+        ),
+    );
+};
+
+/** Day of week from YYYY-MM-DD (0=Sun … 6=Sat). Sakamoto's algorithm. */
+const dayOfWeekFromYmd = (ymd: string): number | null => {
+    const match = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return null;
+
+    let y = Number(match[1]);
+    const m = Number(match[2]);
+    const d = Number(match[3]);
+    const t = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
+    if (m < 3) y -= 1;
+
+    return (
+        (y +
+            Math.floor(y / 4) -
+            Math.floor(y / 100) +
+            Math.floor(y / 400) +
+            t[m - 1] +
+            d) %
+        7
+    );
 };
 
 const minutesToDurationLabel = (minutesTotal: number): string => {
@@ -156,85 +223,17 @@ const canSubmit = computed(() => {
 });
 
 const overlap = computed(
-    (): { hasApprovedOverlap: boolean; hasPendingOverlap: boolean } | null => {
+    (): {
+        hasApprovedOverlap: boolean;
+        hasPendingOverlap: boolean;
+        hasBlackoutOverlap: boolean;
+    } | null => {
         if (!startsAtValue.value || !endsAtValue.value || !durationMinutes.value) {
             return null;
         }
 
-        const partsInTimeZone = (
-            date: Date,
-            timeZone: string,
-        ): {
-            year: number;
-            month: number;
-            day: number;
-            hour: number;
-            minute: number;
-            second: number;
-        } => {
-            const parts = new Intl.DateTimeFormat('en', {
-                timeZone,
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false,
-            }).formatToParts(date);
-
-            const year = Number(parts.find((p) => p.type === 'year')?.value);
-            const month = Number(parts.find((p) => p.type === 'month')?.value);
-            const day = Number(parts.find((p) => p.type === 'day')?.value);
-            const hour = Number(parts.find((p) => p.type === 'hour')?.value);
-            const minute = Number(parts.find((p) => p.type === 'minute')?.value);
-            const second = Number(parts.find((p) => p.type === 'second')?.value);
-
-            return { year, month, day, hour, minute, second };
-        };
-
-        const offsetMsForUtc = (utcMs: number, timeZone: string): number => {
-            const parts = partsInTimeZone(new Date(utcMs), timeZone);
-            const asUtcMs = Date.UTC(
-                parts.year,
-                parts.month - 1,
-                parts.day,
-                parts.hour,
-                parts.minute,
-                parts.second,
-            );
-
-            return utcMs - asUtcMs;
-        };
-
-        const makeDateInTimeZone = (
-            ymd: string,
-            hm: string,
-            timeZone: string,
-        ): Date | null => {
-            const dateMatch = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-            const timeMatch = hm.match(/^(\d{2}):(\d{2})$/);
-
-            if (!dateMatch || !timeMatch) {
-                return null;
-            }
-
-            const year = Number(dateMatch[1]);
-            const month = Number(dateMatch[2]);
-            const day = Number(dateMatch[3]);
-            const hour = Number(timeMatch[1]);
-            const minute = Number(timeMatch[2]);
-
-            const baseUtcMs = Date.UTC(year, month - 1, day, hour, minute, 0);
-
-            const offset1 = offsetMsForUtc(baseUtcMs, timeZone);
-            const offset2 = offsetMsForUtc(baseUtcMs + offset1, timeZone);
-
-            return new Date(baseUtcMs + offset2);
-        };
-
-        const userStart = makeDateInTimeZone(selectedDate.value, startTime.value, APP_TIMEZONE);
-        const userEnd = makeDateInTimeZone(selectedDate.value, endTime.value, APP_TIMEZONE);
+        const userStart = makeDateInLima(selectedDate.value, startTime.value);
+        const userEnd = makeDateInLima(selectedDate.value, endTime.value);
 
         if (
             userStart === null ||
@@ -247,13 +246,10 @@ const overlap = computed(
 
         let hasApprovedOverlap = false;
         let hasPendingOverlap = false;
+        let hasBlackoutOverlap = false;
 
         for (const event of loadedEvents.value) {
             const type = event.extendedProps?.type;
-            if (type === 'blackout') {
-                continue;
-            }
-
             const eventStart = new Date(event.start as string);
             const eventEnd = new Date(event.end as string);
 
@@ -262,15 +258,17 @@ const overlap = computed(
                     hasApprovedOverlap = true;
                 } else if (type === 'pending') {
                     hasPendingOverlap = true;
+                } else if (type === 'blackout') {
+                    hasBlackoutOverlap = true;
                 }
             }
         }
 
-        if (!hasApprovedOverlap && !hasPendingOverlap) {
+        if (!hasApprovedOverlap && !hasPendingOverlap && !hasBlackoutOverlap) {
             return null;
         }
 
-        return { hasApprovedOverlap, hasPendingOverlap };
+        return { hasApprovedOverlap, hasPendingOverlap, hasBlackoutOverlap };
     },
 );
 
@@ -292,6 +290,48 @@ const businessHours = computed(() => {
             endTime: openingHours.value[day].close,
         }),
     );
+});
+
+const selectedDayHours = computed(() => {
+    if (!selectedDate.value) return null;
+    const dow = dayOfWeekFromYmd(selectedDate.value);
+    if (dow === null) return null;
+    const keyMap: Record<number, keyof OpeningHours> = {
+        0: 'sun',
+        1: 'mon',
+        2: 'tue',
+        3: 'wed',
+        4: 'thu',
+        5: 'fri',
+        6: 'sat',
+    };
+    return openingHours.value[keyMap[dow]];
+});
+
+const startTimeMin = computed(() => selectedDayHours.value?.open ?? '00:00');
+
+const startTimeMax = computed(() => {
+    const close = selectedDayHours.value?.close;
+    if (!close) return '23:59';
+    return addMinutesToTime(close, -props.min_duration_minutes) ?? close;
+});
+
+const endTimeMin = computed(() => {
+    if (startTime.value) {
+        return addMinutesToTime(startTime.value, props.min_duration_minutes) ?? (selectedDayHours.value?.open ?? '00:00');
+    }
+    return selectedDayHours.value?.open ?? '00:00';
+});
+
+const endTimeMax = computed(() => {
+    const close = selectedDayHours.value?.close ?? '23:59';
+    if (startTime.value) {
+        const maxFromStart = addMinutesToTime(startTime.value, props.max_duration_minutes);
+        if (maxFromStart && maxFromStart < close) {
+            return maxFromStart;
+        }
+    }
+    return close;
 });
 
 const slotRange = computed((): { min: string; max: string } => {
@@ -378,7 +418,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
             return;
         }
 
-        const nextDate = formatYmdInTimeZone(info.start);
+        const nextDate = info.startStr.slice(0, 10);
         if (nextDate !== selectedDate.value) {
             isSyncingFromCalendar.value = true;
             selectedDate.value = nextDate;
@@ -390,6 +430,29 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 }));
 
 const calendarRef = ref<InstanceType<typeof AppCalendar> | null>(null);
+const endTimeRef = ref<HTMLInputElement | null>(null);
+
+watch(startTime, (newStart) => {
+    if (!newStart) return;
+
+    const startMin = timeToMinutes(newStart);
+    if (startMin === null) return;
+
+    const currentEnd = timeToMinutes(endTime.value);
+    const minEnd = startMin + props.min_duration_minutes;
+    const maxEnd = startMin + props.max_duration_minutes;
+    const wasEmpty = currentEnd === null;
+
+    if (currentEnd === null || currentEnd < minEnd || currentEnd > maxEnd) {
+        endTime.value = addMinutesToTime(newStart, props.min_duration_minutes) ?? '';
+    }
+
+    if (wasEmpty) {
+        void nextTick(() => {
+            endTimeRef.value?.focus();
+        });
+    }
+});
 
 watch(selectedDate, (date) => {
     if (isSyncingFromCalendar.value) {
@@ -397,15 +460,33 @@ watch(selectedDate, (date) => {
     }
 
     const api = calendarRef.value?.getApi?.();
-    if (!api) {
-        return;
+    if (api) {
+        isSyncingFromInput.value = true;
+        api.gotoDate(date);
+        void nextTick(() => {
+            isSyncingFromInput.value = false;
+        });
     }
 
-    isSyncingFromInput.value = true;
-    api.gotoDate(date);
-    void nextTick(() => {
-        isSyncingFromInput.value = false;
-    });
+    const hours = selectedDayHours.value;
+    if (!hours) return;
+
+    const startMin = timeToMinutes(startTime.value);
+    const openMin = timeToMinutes(hours.open);
+    const closeMin = timeToMinutes(hours.close);
+
+    if (startMin !== null && openMin !== null && closeMin !== null) {
+        if (startMin < openMin || startMin >= closeMin) {
+            startTime.value = '';
+            endTime.value = '';
+            return;
+        }
+    }
+
+    const endMin = timeToMinutes(endTime.value);
+    if (endMin !== null && closeMin !== null && endMin > closeMin) {
+        endTime.value = '';
+    }
 });
 </script>
 
@@ -519,6 +600,8 @@ watch(selectedDate, (date) => {
                             id="date"
                             v-model="selectedDate"
                             type="date"
+                            :min="dateMin"
+                            :max="dateMax"
                             class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                         />
                     </div>
@@ -532,6 +615,9 @@ watch(selectedDate, (date) => {
                                 id="start_time"
                                 v-model="startTime"
                                 type="time"
+                                step="300"
+                                :min="startTimeMin"
+                                :max="startTimeMax"
                                 class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                             />
                         </div>
@@ -540,8 +626,12 @@ watch(selectedDate, (date) => {
                             <label class="text-sm" for="end_time"> Fin </label>
                             <input
                                 id="end_time"
+                                ref="endTimeRef"
                                 v-model="endTime"
                                 type="time"
+                                step="300"
+                                :min="endTimeMin"
+                                :max="endTimeMax"
                                 class="h-9 rounded-md border border-input bg-background px-3 text-sm"
                             />
                         </div>
@@ -586,8 +676,20 @@ watch(selectedDate, (date) => {
                         </div>
 
                         <div class="mt-2 text-xs text-muted-foreground">
-                            Mín: {{ props.min_duration_minutes }} min · Máx:
-                            {{ props.max_duration_minutes }} min
+                            Mín:
+                            {{
+                                minutesToDurationLabel(
+                                    props.min_duration_minutes,
+                                )
+                            }}
+                            · Máx:
+                            {{
+                                minutesToDurationLabel(
+                                    props.max_duration_minutes,
+                                )
+                            }}
+                            · Anticipación: {{ props.lead_time_min_hours }}h –
+                            {{ props.lead_time_max_days }} días
                         </div>
                     </div>
 
@@ -617,6 +719,10 @@ watch(selectedDate, (date) => {
                                     El horario se superpone con una solicitud
                                     pendiente.
                                 </p>
+                                <p v-if="overlap.hasBlackoutOverlap">
+                                    El horario se superpone con un periodo
+                                    bloqueado.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -630,6 +736,7 @@ watch(selectedDate, (date) => {
                         class="mt-2"
                         :disabled="processing || !canSubmit"
                     >
+                        <Spinner v-if="processing" />
                         Enviar solicitud
                     </Button>
 

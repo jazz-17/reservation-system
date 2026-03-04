@@ -26,6 +26,8 @@ class ReservationController extends Controller
             'opening_hours' => $settings->get('opening_hours'),
             'min_duration_minutes' => $settings->getInt('min_duration_minutes'),
             'max_duration_minutes' => $settings->getInt('max_duration_minutes'),
+            'lead_time_min_hours' => $settings->getInt('lead_time_min_hours'),
+            'lead_time_max_days' => $settings->getInt('lead_time_max_days'),
         ]);
     }
 
