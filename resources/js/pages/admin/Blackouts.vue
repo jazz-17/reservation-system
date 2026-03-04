@@ -8,6 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableEmpty,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { APP_TIMEZONE, formatDateTime } from '@/lib/formatters';
 import adminBlackoutsRoutes from '@/routes/admin/blackouts';
@@ -74,192 +84,249 @@ const removeRecurring = (id: number): void => {
             subtitle="Fechas/horas no reservables (mantenimiento, feriados, etc.)."
         />
 
-        <AdminSection title="Crear blackout recurrente">
-            <Form
-                v-bind="adminBlackoutsRoutes.recurring.store.form()"
-                v-slot="{ errors, processing }"
-                class="mt-4 grid gap-3 md:grid-cols-2"
-            >
-                <div class="grid gap-1">
-                    <Label for="weekday">Día</Label>
-                    <NativeSelect id="weekday" name="weekday" :default-value="1">
-                        <option
-                            v-for="d in weekdayOptions"
-                            :key="d.value"
-                            :value="d.value"
+        <Tabs default-value="unicos">
+            <TabsList>
+                <TabsTrigger value="unicos">Únicos</TabsTrigger>
+                <TabsTrigger value="recurrentes">Recurrentes</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="unicos" class="flex flex-col gap-4">
+                <AdminSection title="Nuevo blackout">
+                    <Form
+                        v-bind="adminBlackoutsRoutes.store.form()"
+                        v-slot="{ errors, processing }"
+                        class="mt-4 grid gap-3 md:grid-cols-2"
+                    >
+                        <div class="grid gap-1">
+                            <Label for="starts_at">Inicio</Label>
+                            <Input
+                                id="starts_at"
+                                name="starts_at"
+                                type="datetime-local"
+                            />
+                            <div class="text-xs text-muted-foreground">
+                                Hora en {{ APP_TIMEZONE }}.
+                            </div>
+                            <InputError :message="errors.starts_at" />
+                        </div>
+
+                        <div class="grid gap-1">
+                            <Label for="ends_at">Fin</Label>
+                            <Input
+                                id="ends_at"
+                                name="ends_at"
+                                type="datetime-local"
+                            />
+                            <div class="text-xs text-muted-foreground">
+                                Hora en {{ APP_TIMEZONE }}.
+                            </div>
+                            <InputError :message="errors.ends_at" />
+                        </div>
+
+                        <div class="grid gap-1 md:col-span-2">
+                            <Label for="reason">Motivo</Label>
+                            <Input
+                                id="reason"
+                                name="reason"
+                                type="text"
+                                placeholder="Mantenimiento"
+                            />
+                            <InputError :message="errors.reason" />
+                        </div>
+
+                        <div class="flex items-center justify-end md:col-span-2">
+                            <Button type="submit" :disabled="processing">
+                                Guardar
+                            </Button>
+                        </div>
+                    </Form>
+                </AdminSection>
+
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Inicio</TableHead>
+                            <TableHead>Fin</TableHead>
+                            <TableHead>Motivo</TableHead>
+                            <TableHead />
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow
+                            v-for="b in props.blackouts"
+                            :key="b.id"
                         >
-                            {{ d.label }}
-                        </option>
-                    </NativeSelect>
-                    <InputError :message="errors.weekday" />
-                </div>
+                            <TableCell>{{ formatDateTime(b.starts_at) }}</TableCell>
+                            <TableCell>{{ formatDateTime(b.ends_at) }}</TableCell>
+                            <TableCell class="text-muted-foreground">
+                                {{ b.reason ?? '—' }}
+                            </TableCell>
+                            <TableCell class="text-right">
+                                <ConfirmDialog
+                                    title="¿Eliminar este bloqueo?"
+                                    description="Esta acción no se puede deshacer."
+                                    confirm-label="Eliminar"
+                                    variant="destructive"
+                                    @confirm="remove(b.id)"
+                                >
+                                    <template #trigger>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                        >
+                                            Eliminar
+                                        </Button>
+                                    </template>
+                                </ConfirmDialog>
+                            </TableCell>
+                        </TableRow>
+                        <TableEmpty
+                            v-if="props.blackouts.length === 0"
+                            :colspan="4"
+                        >
+                            No hay blackouts.
+                        </TableEmpty>
+                    </TableBody>
+                </Table>
+            </TabsContent>
 
-                <div class="grid gap-1">
-                    <Label for="starts_time">Inicio</Label>
-                    <Input id="starts_time" name="starts_time" type="time" />
-                    <InputError :message="errors.starts_time" />
-                </div>
-
-                <div class="grid gap-1">
-                    <Label for="ends_time">Fin</Label>
-                    <Input id="ends_time" name="ends_time" type="time" />
-                    <InputError :message="errors.ends_time" />
-                </div>
-
-                <div class="grid gap-1">
-                    <Label for="starts_on">Desde (opcional)</Label>
-                    <Input id="starts_on" name="starts_on" type="date" />
-                    <InputError :message="errors.starts_on" />
-                </div>
-
-                <div class="grid gap-1">
-                    <Label for="ends_on">Hasta (opcional)</Label>
-                    <Input id="ends_on" name="ends_on" type="date" />
-                    <InputError :message="errors.ends_on" />
-                </div>
-
-                <div class="grid gap-1 md:col-span-2">
-                    <Label for="reason_recurring">Motivo</Label>
-                    <Input
-                        id="reason_recurring"
-                        name="reason"
-                        type="text"
-                        placeholder="Mantenimiento"
-                    />
-                    <InputError :message="errors.reason" />
-                </div>
-
-                <div class="flex items-center justify-end md:col-span-2">
-                    <Button type="submit" :disabled="processing">
-                        Guardar
-                    </Button>
-                </div>
-            </Form>
-        </AdminSection>
-
-        <div class="rounded-lg border border-border/60">
-            <div class="border-b border-border/60 px-4 py-3 text-sm font-medium">
-                Lista (recurrentes)
-            </div>
-            <div class="divide-y divide-border/60">
-                <div
-                    v-for="b in props.recurring_blackouts"
-                    :key="b.id"
-                    class="flex flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:justify-between"
-                >
-                    <div class="text-sm">
-                        <div class="font-medium">
-                            {{ weekdayLabel(b.weekday) }}
-                            {{ b.starts_time.slice(0, 5) }} —
-                            {{ b.ends_time.slice(0, 5) }}
-                        </div>
-                        <div class="text-xs text-muted-foreground">
-                            {{ rangeLabel(b) }} · {{ b.reason ?? '—' }}
-                        </div>
-                    </div>
-                    <ConfirmDialog
-                        title="¿Eliminar este bloqueo recurrente?"
-                        description="Esta acción no se puede deshacer."
-                        confirm-label="Eliminar"
-                        variant="destructive"
-                        @confirm="removeRecurring(b.id)"
+            <TabsContent value="recurrentes" class="flex flex-col gap-4">
+                <AdminSection title="Nuevo blackout recurrente">
+                    <Form
+                        v-bind="adminBlackoutsRoutes.recurring.store.form()"
+                        v-slot="{ errors, processing }"
+                        class="mt-4 grid gap-3 md:grid-cols-2"
                     >
-                        <template #trigger>
-                            <Button type="button" size="sm">
-                                Eliminar
-                            </Button>
-                        </template>
-                    </ConfirmDialog>
-                </div>
-                <div
-                    v-if="props.recurring_blackouts.length === 0"
-                    class="px-4 py-6 text-sm text-muted-foreground"
-                >
-                    No hay blackouts recurrentes.
-                </div>
-            </div>
-        </div>
-
-        <AdminSection title="Crear blackout">
-            <Form
-                v-bind="adminBlackoutsRoutes.store.form()"
-                v-slot="{ errors, processing }"
-                class="mt-4 grid gap-3 md:grid-cols-2"
-            >
-                <div class="grid gap-1">
-                    <Label for="starts_at">Inicio</Label>
-                    <Input id="starts_at" name="starts_at" type="datetime-local" />
-                    <div class="text-xs text-muted-foreground">
-                        Hora en {{ APP_TIMEZONE }}.
-                    </div>
-                    <InputError :message="errors.starts_at" />
-                </div>
-
-                <div class="grid gap-1">
-                    <Label for="ends_at">Fin</Label>
-                    <Input id="ends_at" name="ends_at" type="datetime-local" />
-                    <div class="text-xs text-muted-foreground">
-                        Hora en {{ APP_TIMEZONE }}.
-                    </div>
-                    <InputError :message="errors.ends_at" />
-                </div>
-
-                <div class="grid gap-1 md:col-span-2">
-                    <Label for="reason">Motivo</Label>
-                    <Input id="reason" name="reason" type="text" placeholder="Mantenimiento" />
-                    <InputError :message="errors.reason" />
-                </div>
-
-                <div class="flex items-center justify-end md:col-span-2">
-                    <Button type="submit" :disabled="processing">
-                        Guardar
-                    </Button>
-                </div>
-            </Form>
-        </AdminSection>
-
-        <div class="rounded-lg border border-border/60">
-            <div
-                class="border-b border-border/60 px-4 py-3 text-sm font-medium"
-            >
-                Lista
-            </div>
-            <div class="divide-y divide-border/60">
-                <div
-                    v-for="b in props.blackouts"
-                    :key="b.id"
-                    class="flex flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:justify-between"
-                >
-                    <div class="text-sm">
-                        <div class="font-medium">
-                            {{ formatDateTime(b.starts_at) }} —
-                            {{ formatDateTime(b.ends_at) }}
+                        <div class="grid gap-1">
+                            <Label for="weekday">Día</Label>
+                            <NativeSelect
+                                id="weekday"
+                                name="weekday"
+                                :default-value="1"
+                            >
+                                <option
+                                    v-for="d in weekdayOptions"
+                                    :key="d.value"
+                                    :value="d.value"
+                                >
+                                    {{ d.label }}
+                                </option>
+                            </NativeSelect>
+                            <InputError :message="errors.weekday" />
                         </div>
-                        <div class="text-xs text-muted-foreground">
-                            {{ b.reason ?? '—' }}
+
+                        <div class="grid gap-1">
+                            <Label for="starts_time">Inicio</Label>
+                            <Input
+                                id="starts_time"
+                                name="starts_time"
+                                type="time"
+                            />
+                            <InputError :message="errors.starts_time" />
                         </div>
-                    </div>
-                    <ConfirmDialog
-                        title="¿Eliminar este bloqueo?"
-                        description="Esta acción no se puede deshacer."
-                        confirm-label="Eliminar"
-                        variant="destructive"
-                        @confirm="remove(b.id)"
-                    >
-                        <template #trigger>
-                            <Button type="button" size="sm">
-                                Eliminar
+
+                        <div class="grid gap-1">
+                            <Label for="ends_time">Fin</Label>
+                            <Input
+                                id="ends_time"
+                                name="ends_time"
+                                type="time"
+                            />
+                            <InputError :message="errors.ends_time" />
+                        </div>
+
+                        <div class="grid gap-1">
+                            <Label for="starts_on">Desde (opcional)</Label>
+                            <Input
+                                id="starts_on"
+                                name="starts_on"
+                                type="date"
+                            />
+                            <InputError :message="errors.starts_on" />
+                        </div>
+
+                        <div class="grid gap-1">
+                            <Label for="ends_on">Hasta (opcional)</Label>
+                            <Input
+                                id="ends_on"
+                                name="ends_on"
+                                type="date"
+                            />
+                            <InputError :message="errors.ends_on" />
+                        </div>
+
+                        <div class="grid gap-1 md:col-span-2">
+                            <Label for="reason_recurring">Motivo</Label>
+                            <Input
+                                id="reason_recurring"
+                                name="reason"
+                                type="text"
+                                placeholder="Mantenimiento"
+                            />
+                            <InputError :message="errors.reason" />
+                        </div>
+
+                        <div class="flex items-center justify-end md:col-span-2">
+                            <Button type="submit" :disabled="processing">
+                                Guardar
                             </Button>
-                        </template>
-                    </ConfirmDialog>
-                </div>
-                <div
-                    v-if="props.blackouts.length === 0"
-                    class="px-4 py-6 text-sm text-muted-foreground"
-                >
-                    No hay blackouts.
-                </div>
-            </div>
-        </div>
+                        </div>
+                    </Form>
+                </AdminSection>
+
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Día / Horario</TableHead>
+                            <TableHead>Vigencia</TableHead>
+                            <TableHead>Motivo</TableHead>
+                            <TableHead />
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow
+                            v-for="b in props.recurring_blackouts"
+                            :key="b.id"
+                        >
+                            <TableCell>
+                                {{ weekdayLabel(b.weekday) }} ·
+                                {{ b.starts_time.slice(0, 5) }} —
+                                {{ b.ends_time.slice(0, 5) }}
+                            </TableCell>
+                            <TableCell>{{ rangeLabel(b) }}</TableCell>
+                            <TableCell class="text-muted-foreground">
+                                {{ b.reason ?? '—' }}
+                            </TableCell>
+                            <TableCell class="text-right">
+                                <ConfirmDialog
+                                    title="¿Eliminar este bloqueo recurrente?"
+                                    description="Esta acción no se puede deshacer."
+                                    confirm-label="Eliminar"
+                                    variant="destructive"
+                                    @confirm="removeRecurring(b.id)"
+                                >
+                                    <template #trigger>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                        >
+                                            Eliminar
+                                        </Button>
+                                    </template>
+                                </ConfirmDialog>
+                            </TableCell>
+                        </TableRow>
+                        <TableEmpty
+                            v-if="props.recurring_blackouts.length === 0"
+                            :colspan="4"
+                        >
+                            No hay blackouts recurrentes.
+                        </TableEmpty>
+                    </TableBody>
+                </Table>
+            </TabsContent>
+        </Tabs>
     </div>
 </template>

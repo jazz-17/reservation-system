@@ -34,7 +34,6 @@ import adminFacultiesRoutes from '@/routes/admin/faculties';
 import adminHistoryRoutes from '@/routes/admin/history';
 import adminRequestsRoutes from '@/routes/admin/requests';
 import adminRolesPermissionsRoutes from '@/routes/admin/roles-permissions';
-import adminSchoolsRoutes from '@/routes/admin/schools';
 import adminSettingsRoutes from '@/routes/admin/settings';
 import adminUsersRoutes from '@/routes/admin/users';
 import calendarRoutes from '@/routes/calendar';
@@ -110,16 +109,8 @@ const gestionNavItems = computed<NavItem[]>(() =>
         {
             permission: 'admin.gestion.facultades.manage',
             item: {
-                title: 'Facultades',
+                title: 'Facultades y Escuelas',
                 href: adminFacultiesRoutes.index(),
-                icon: Shield,
-            },
-        },
-        {
-            permission: 'admin.gestion.escuelas.manage',
-            item: {
-                title: 'Escuelas',
-                href: adminSchoolsRoutes.index(),
                 icon: Shield,
             },
         },

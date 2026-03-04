@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreFacultyRequest;
 use App\Http\Requests\Admin\UpdateFacultyRequest;
 use App\Models\Faculty;
+use App\Models\ProfessionalSchool;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,6 +19,11 @@ class FacultyController extends Controller
             'faculties' => Faculty::query()
                 ->orderBy('name')
                 ->get(['id', 'name', 'active']),
+            'schools' => ProfessionalSchool::query()
+                ->with(['faculty:id,name'])
+                ->orderBy('faculty_id')
+                ->orderBy('name')
+                ->get(['id', 'faculty_id', 'code', 'name', 'base_year_min', 'base_year_max', 'active']),
         ]);
     }
 
