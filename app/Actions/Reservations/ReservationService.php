@@ -33,7 +33,7 @@ class ReservationService
         }
 
         try {
-            return DB::transaction(function () use ($user, $startsAtUtc, $endsAtUtc): Reservation {
+            $reservation = DB::transaction(function () use ($user, $startsAtUtc, $endsAtUtc): Reservation {
                 $this->acquireCreationLocks($user, $startsAtUtc);
                 $this->rules->validateForCreation($user, $startsAtUtc, $endsAtUtc);
 
@@ -61,6 +61,10 @@ class ReservationService
 
             throw $exception;
         }
+
+        $this->enqueueEmails($reservation, event: 'pending');
+
+        return $reservation;
     }
 
     public function cancel(User $actor, Reservation $reservation, ?string $reason = null): Reservation
@@ -196,62 +200,162 @@ class ReservationService
 
     private function enqueueEmails(Reservation $reservation, string $event): void
     {
-        $notifyAdmin = $this->settings->get('notify_admin_emails');
-        $adminRecipients = is_array($notifyAdmin) ? $notifyAdmin : ['to' => []];
+        $reservation->loadMissing('user');
+        $studentEmail = $reservation->user?->email;
+        $studentEmail = is_string($studentEmail) ? trim($studentEmail) : '';
 
-        $adminTo = array_values(array_filter($adminRecipients['to'] ?? []));
-        $adminCc = array_values(array_filter($adminRecipients['cc'] ?? []));
-        $adminBcc = array_values(array_filter($adminRecipients['bcc'] ?? []));
+        $notify = $this->settings->get('notify_email_events');
+        $notifyAdmin = $this->isEmailEventEnabled($notify, role: 'admin', event: $event);
+        $notifyStudent = $studentEmail !== '' && $this->isEmailEventEnabled($notify, role: 'student', event: $event);
 
-        if (count($adminTo) > 0) {
-            $adminArtifact = ReservationArtifact::query()->updateOrCreate(
+        if ($notifyAdmin) {
+            $notifyAdminEmails = $this->settings->get('notify_admin_emails');
+            $adminRecipients = is_array($notifyAdminEmails) ? $notifyAdminEmails : ['to' => [], 'cc' => [], 'bcc' => []];
+
+            $adminTo = $this->normalizeEmailList(is_array($adminRecipients['to'] ?? null) ? $adminRecipients['to'] : []);
+            $adminCc = $this->normalizeEmailList(is_array($adminRecipients['cc'] ?? null) ? $adminRecipients['cc'] : []);
+            $adminBcc = $this->normalizeEmailList(is_array($adminRecipients['bcc'] ?? null) ? $adminRecipients['bcc'] : []);
+
+            [$adminTo, $adminCc, $adminBcc] = $this->dedupeAcrossLists($adminTo, $adminCc, $adminBcc);
+
+            if ($notifyStudent) {
+                $adminTo = $this->removeEmail($adminTo, $studentEmail);
+                $adminCc = $this->removeEmail($adminCc, $studentEmail);
+                $adminBcc = $this->removeEmail($adminBcc, $studentEmail);
+            }
+
+            if (count($adminTo) > 0) {
+                $adminArtifact = ReservationArtifact::query()->updateOrCreate(
+                    [
+                        'reservation_id' => $reservation->id,
+                        'kind' => ReservationArtifactKind::EmailAdmin,
+                    ],
+                    [
+                        'status' => ReservationArtifactStatus::Pending,
+                        'attempts' => 0,
+                        'payload' => [
+                            'event' => $event,
+                            'to' => $adminTo,
+                            'cc' => $adminCc,
+                            'bcc' => $adminBcc,
+                        ],
+                    ],
+                );
+
+                DB::afterCommit(function () use ($adminArtifact): void {
+                    SendReservationEmail::dispatch($adminArtifact->id);
+                });
+            }
+        }
+
+        if ($notifyStudent) {
+            $studentArtifact = ReservationArtifact::query()->updateOrCreate(
                 [
                     'reservation_id' => $reservation->id,
-                    'kind' => ReservationArtifactKind::EmailAdmin,
+                    'kind' => ReservationArtifactKind::EmailStudent,
                 ],
                 [
                     'status' => ReservationArtifactStatus::Pending,
                     'attempts' => 0,
                     'payload' => [
                         'event' => $event,
-                        'to' => $adminTo,
-                        'cc' => $adminCc,
-                        'bcc' => $adminBcc,
+                        'to' => [$studentEmail],
+                        'cc' => [],
+                        'bcc' => [],
                     ],
                 ],
             );
 
-            DB::afterCommit(function () use ($adminArtifact): void {
-                SendReservationEmail::dispatch($adminArtifact->id);
+            DB::afterCommit(function () use ($studentArtifact): void {
+                SendReservationEmail::dispatch($studentArtifact->id);
             });
         }
+    }
 
-        $reservation->loadMissing('user');
-        $studentEmail = $reservation->user?->email;
-        if (! is_string($studentEmail) || $studentEmail === '') {
-            return;
+    private function isEmailEventEnabled(mixed $value, string $role, string $event): bool
+    {
+        if (! is_array($value)) {
+            return false;
         }
 
-        $studentArtifact = ReservationArtifact::query()->updateOrCreate(
-            [
-                'reservation_id' => $reservation->id,
-                'kind' => ReservationArtifactKind::EmailStudent,
-            ],
-            [
-                'status' => ReservationArtifactStatus::Pending,
-                'attempts' => 0,
-                'payload' => [
-                    'event' => $event,
-                    'to' => [$studentEmail],
-                    'cc' => [],
-                    'bcc' => [],
-                ],
-            ],
-        );
+        $roleConfig = $value[$role] ?? null;
+        if (! is_array($roleConfig)) {
+            return false;
+        }
 
-        DB::afterCommit(function () use ($studentArtifact): void {
-            SendReservationEmail::dispatch($studentArtifact->id);
-        });
+        return (bool) ($roleConfig[$event] ?? false);
+    }
+
+    /**
+     * @param  list<mixed>  $emails
+     * @return list<string>
+     */
+    private function normalizeEmailList(array $emails): array
+    {
+        $normalized = [];
+        $seen = [];
+
+        foreach ($emails as $email) {
+            if (! is_string($email)) {
+                continue;
+            }
+
+            $trimmed = trim($email);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            $key = strtolower($trimmed);
+            if (array_key_exists($key, $seen)) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $normalized[] = $trimmed;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param  list<string>  $to
+     * @param  list<string>  $cc
+     * @param  list<string>  $bcc
+     * @return array{0: list<string>, 1: list<string>, 2: list<string>}
+     */
+    private function dedupeAcrossLists(array $to, array $cc, array $bcc): array
+    {
+        $toKeys = array_flip(array_map(static fn (string $email): string => strtolower($email), $to));
+
+        $cc = array_values(array_filter($cc, static function (string $email) use ($toKeys): bool {
+            return ! array_key_exists(strtolower($email), $toKeys);
+        }));
+
+        $ccKeys = array_flip(array_map(static fn (string $email): string => strtolower($email), $cc));
+
+        $bcc = array_values(array_filter($bcc, static function (string $email) use ($toKeys, $ccKeys): bool {
+            $key = strtolower($email);
+
+            return ! array_key_exists($key, $toKeys) && ! array_key_exists($key, $ccKeys);
+        }));
+
+        return [$to, $cc, $bcc];
+    }
+
+    /**
+     * @param  list<string>  $emails
+     * @return list<string>
+     */
+    private function removeEmail(array $emails, string $email): array
+    {
+        $needle = strtolower(trim($email));
+        if ($needle === '') {
+            return $emails;
+        }
+
+        return array_values(array_filter($emails, static function (string $candidate) use ($needle): bool {
+            return strtolower($candidate) !== $needle;
+        }));
     }
 
     private function acquireCreationLocks(User $user, CarbonImmutable $startsAtUtc): void

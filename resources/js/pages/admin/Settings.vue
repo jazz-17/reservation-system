@@ -5,6 +5,7 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -20,7 +21,7 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { APP_LOCALE, APP_TIMEZONE } from '@/lib/formatters';
 import adminRequestsRoutes from '@/routes/admin/requests';
 import adminSettingsRoutes from '@/routes/admin/settings';
-import type { AdminSettings, DayKey } from '@/types/admin';
+import type { AdminSettings, DayKey, NotifyEmailEventKey } from '@/types/admin';
 
 const props = defineProps<{
     settings: AdminSettings;
@@ -43,12 +44,44 @@ const dayLabels: Record<DayKey, string> = {
     sun: 'Dom',
 };
 
+const notifyEmailEventLabels: Record<NotifyEmailEventKey, string> = {
+    pending: 'Pendiente',
+    approved: 'Aprobada',
+    rejected: 'Rechazada',
+    cancelled: 'Cancelada',
+    expired: 'Expirada',
+};
+
+const notifyEmailEvents: NotifyEmailEventKey[] = [
+    'pending',
+    'approved',
+    'rejected',
+    'cancelled',
+    'expired',
+];
+
 const formState = reactive<AdminSettings>({
     ...props.settings,
     notify_admin_emails: {
         to: props.settings.notify_admin_emails?.to ?? [],
         cc: props.settings.notify_admin_emails?.cc ?? [],
         bcc: props.settings.notify_admin_emails?.bcc ?? [],
+    },
+    notify_email_events: {
+        admin: {
+            pending: props.settings.notify_email_events?.admin?.pending ?? true,
+            approved: props.settings.notify_email_events?.admin?.approved ?? false,
+            rejected: props.settings.notify_email_events?.admin?.rejected ?? false,
+            cancelled: props.settings.notify_email_events?.admin?.cancelled ?? true,
+            expired: props.settings.notify_email_events?.admin?.expired ?? true,
+        },
+        student: {
+            pending: props.settings.notify_email_events?.student?.pending ?? false,
+            approved: props.settings.notify_email_events?.student?.approved ?? true,
+            rejected: props.settings.notify_email_events?.student?.rejected ?? true,
+            cancelled: props.settings.notify_email_events?.student?.cancelled ?? true,
+            expired: props.settings.notify_email_events?.student?.expired ?? true,
+        },
     },
 });
 
@@ -326,6 +359,48 @@ const resetToDefaults = (): void => {
                             :message="errors['notify_admin_emails.bcc']"
                         />
                     </div>
+                </div>
+
+                <div class="mt-4 border-t border-border/60 pt-4">
+                    <div class="mb-3 text-sm font-medium">
+                        Eventos de email
+                    </div>
+
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Evento</TableHead>
+                                <TableHead class="text-center">Admin</TableHead>
+                                <TableHead class="text-center">Estudiante</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow
+                                v-for="event in notifyEmailEvents"
+                                :key="event"
+                            >
+                                <TableCell>
+                                    {{ notifyEmailEventLabels[event] }}
+                                </TableCell>
+                                <TableCell class="text-center">
+                                    <Checkbox
+                                        :id="`notify_email_events_admin_${event}`"
+                                        v-model:checked="formState.notify_email_events.admin[event]"
+                                    />
+                                </TableCell>
+                                <TableCell class="text-center">
+                                    <Checkbox
+                                        :id="`notify_email_events_student_${event}`"
+                                        v-model:checked="formState.notify_email_events.student[event]"
+                                    />
+                                </TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+
+                    <InputError
+                        :message="Object.entries(errors).find(([k]) => k.startsWith('notify_email_events'))?.[1]"
+                    />
                 </div>
             </div>
 

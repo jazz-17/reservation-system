@@ -92,6 +92,120 @@ test('students can create a pending reservation and it blocks availability', fun
     expect($conflict)->toBeTrue();
 });
 
+test('creating a reservation enqueues admin email when pending event is enabled', function () {
+    Queue::fake();
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_admin_emails'],
+        ['value' => ['to' => ['admin.notify@example.edu'], 'cc' => [], 'bcc' => []], 'updated_by' => null],
+    );
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_email_events'],
+        [
+            'value' => [
+                'admin' => [
+                    'pending' => true,
+                    'approved' => false,
+                    'rejected' => false,
+                    'cancelled' => true,
+                    'expired' => true,
+                ],
+                'student' => [
+                    'pending' => false,
+                    'approved' => true,
+                    'rejected' => true,
+                    'cancelled' => true,
+                    'expired' => true,
+                ],
+            ],
+            'updated_by' => null,
+        ],
+    );
+
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $startsAtLocal = CarbonImmutable::now('America/Lima')->addDay()->setTime(10, 0);
+    $startsAtUtc = $startsAtLocal->setTimezone('UTC');
+    $endsAtUtc = $startsAtUtc->addHour();
+
+    $this->post(route('reservations.store'), [
+        'starts_at' => $startsAtUtc->toIso8601String(),
+        'ends_at' => $endsAtUtc->toIso8601String(),
+    ])->assertRedirect();
+
+    $reservation = Reservation::query()->firstOrFail();
+
+    expect(ReservationArtifact::query()
+        ->where('reservation_id', $reservation->id)
+        ->where('kind', ReservationArtifactKind::EmailAdmin)
+        ->exists()
+    )->toBeTrue();
+
+    expect(ReservationArtifact::query()
+        ->where('reservation_id', $reservation->id)
+        ->where('kind', ReservationArtifactKind::EmailStudent)
+        ->exists()
+    )->toBeFalse();
+
+    Queue::assertPushedTimes(SendReservationEmail::class, 1);
+});
+
+test('creating a reservation does not enqueue emails when pending events are disabled', function () {
+    Queue::fake();
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_admin_emails'],
+        ['value' => ['to' => ['admin.notify@example.edu'], 'cc' => [], 'bcc' => []], 'updated_by' => null],
+    );
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_email_events'],
+        [
+            'value' => [
+                'admin' => [
+                    'pending' => false,
+                    'approved' => false,
+                    'rejected' => false,
+                    'cancelled' => true,
+                    'expired' => true,
+                ],
+                'student' => [
+                    'pending' => false,
+                    'approved' => true,
+                    'rejected' => true,
+                    'cancelled' => true,
+                    'expired' => true,
+                ],
+            ],
+            'updated_by' => null,
+        ],
+    );
+
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $startsAtLocal = CarbonImmutable::now('America/Lima')->addDay()->setTime(10, 0);
+    $startsAtUtc = $startsAtLocal->setTimezone('UTC');
+    $endsAtUtc = $startsAtUtc->addHour();
+
+    $this->post(route('reservations.store'), [
+        'starts_at' => $startsAtUtc->toIso8601String(),
+        'ends_at' => $endsAtUtc->toIso8601String(),
+    ])->assertRedirect();
+
+    $reservation = Reservation::query()->firstOrFail();
+
+    expect(ReservationArtifact::query()
+        ->where('reservation_id', $reservation->id)
+        ->whereIn('kind', [ReservationArtifactKind::EmailAdmin, ReservationArtifactKind::EmailStudent])
+        ->exists()
+    )->toBeFalse();
+
+    Queue::assertNotPushed(SendReservationEmail::class);
+});
+
 test('multiple students can request the same pending slot', function () {
     $startsAtLocal = CarbonImmutable::now('America/Lima')->addDay()->setTime(11, 0);
     $startsAtUtc = $startsAtLocal->setTimezone('UTC');
@@ -262,6 +376,29 @@ test('approving a reservation enqueues email artifacts', function () {
         ['value' => ['to' => ['admin.notify@example.edu'], 'cc' => [], 'bcc' => []], 'updated_by' => null],
     );
 
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_email_events'],
+        [
+            'value' => [
+                'admin' => [
+                    'pending' => true,
+                    'approved' => true,
+                    'rejected' => false,
+                    'cancelled' => true,
+                    'expired' => true,
+                ],
+                'student' => [
+                    'pending' => false,
+                    'approved' => true,
+                    'rejected' => true,
+                    'cancelled' => true,
+                    'expired' => true,
+                ],
+            ],
+            'updated_by' => null,
+        ],
+    );
+
     $admin = User::factory()->admin()->create();
     $user = User::factory()->create();
 
@@ -416,6 +553,29 @@ test('admins can reject a pending reservation end-to-end', function () {
         ['value' => ['to' => ['admin.notify@example.edu'], 'cc' => [], 'bcc' => []], 'updated_by' => null],
     );
 
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_email_events'],
+        [
+            'value' => [
+                'admin' => [
+                    'pending' => true,
+                    'approved' => false,
+                    'rejected' => true,
+                    'cancelled' => true,
+                    'expired' => true,
+                ],
+                'student' => [
+                    'pending' => false,
+                    'approved' => true,
+                    'rejected' => true,
+                    'cancelled' => true,
+                    'expired' => true,
+                ],
+            ],
+            'updated_by' => null,
+        ],
+    );
+
     $admin = User::factory()->admin()->create();
     $student = User::factory()->create();
 
@@ -444,6 +604,192 @@ test('admins can reject a pending reservation end-to-end', function () {
     expect(ReservationArtifact::query()->where('reservation_id', $reservation->id)->where('kind', ReservationArtifactKind::EmailStudent)->exists())->toBeTrue();
 
     Queue::assertPushedTimes(SendReservationEmail::class, 2);
+});
+
+test('student email is deduplicated from admin recipients when both are enabled', function () {
+    Queue::fake();
+
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->create();
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_admin_emails'],
+        ['value' => ['to' => [$student->email], 'cc' => [], 'bcc' => []], 'updated_by' => null],
+    );
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_email_events'],
+        [
+            'value' => [
+                'admin' => [
+                    'pending' => true,
+                    'approved' => false,
+                    'rejected' => true,
+                    'cancelled' => true,
+                    'expired' => true,
+                ],
+                'student' => [
+                    'pending' => false,
+                    'approved' => true,
+                    'rejected' => true,
+                    'cancelled' => true,
+                    'expired' => true,
+                ],
+            ],
+            'updated_by' => null,
+        ],
+    );
+
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->addDay()->setTime(16, 0)->setTimezone('UTC');
+
+    $reservation = Reservation::factory()->create([
+        'user_id' => $student->id,
+        'status' => ReservationStatus::Pending,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school_id' => $student->professional_school_id,
+        'base_year' => $student->base_year,
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.requests.reject', $reservation), ['reason' => 'No disponible'])
+        ->assertRedirect();
+
+    expect(ReservationArtifact::query()
+        ->where('reservation_id', $reservation->id)
+        ->where('kind', ReservationArtifactKind::EmailAdmin)
+        ->exists()
+    )->toBeFalse();
+
+    expect(ReservationArtifact::query()
+        ->where('reservation_id', $reservation->id)
+        ->where('kind', ReservationArtifactKind::EmailStudent)
+        ->exists()
+    )->toBeTrue();
+
+    Queue::assertPushedTimes(SendReservationEmail::class, 1);
+});
+
+test('student email stays in admin recipients when student event is disabled', function () {
+    Queue::fake();
+
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->create();
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_admin_emails'],
+        ['value' => ['to' => [$student->email], 'cc' => [], 'bcc' => []], 'updated_by' => null],
+    );
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_email_events'],
+        [
+            'value' => [
+                'admin' => [
+                    'pending' => true,
+                    'approved' => false,
+                    'rejected' => true,
+                    'cancelled' => true,
+                    'expired' => true,
+                ],
+                'student' => [
+                    'pending' => false,
+                    'approved' => true,
+                    'rejected' => false,
+                    'cancelled' => true,
+                    'expired' => true,
+                ],
+            ],
+            'updated_by' => null,
+        ],
+    );
+
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->addDay()->setTime(16, 0)->setTimezone('UTC');
+
+    $reservation = Reservation::factory()->create([
+        'user_id' => $student->id,
+        'status' => ReservationStatus::Pending,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school_id' => $student->professional_school_id,
+        'base_year' => $student->base_year,
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.requests.reject', $reservation), ['reason' => 'No disponible'])
+        ->assertRedirect();
+
+    $adminArtifact = ReservationArtifact::query()
+        ->where('reservation_id', $reservation->id)
+        ->where('kind', ReservationArtifactKind::EmailAdmin)
+        ->first();
+
+    expect($adminArtifact)->not->toBeNull();
+    expect($adminArtifact?->payload['to'] ?? [])->toContain($student->email);
+
+    expect(ReservationArtifact::query()
+        ->where('reservation_id', $reservation->id)
+        ->where('kind', ReservationArtifactKind::EmailStudent)
+        ->exists()
+    )->toBeFalse();
+
+    Queue::assertPushedTimes(SendReservationEmail::class, 1);
+});
+
+test('disabling all events prevents email artifacts on approval', function () {
+    Queue::fake();
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_admin_emails'],
+        ['value' => ['to' => ['admin.notify@example.edu'], 'cc' => [], 'bcc' => []], 'updated_by' => null],
+    );
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_email_events'],
+        [
+            'value' => [
+                'admin' => [
+                    'pending' => true,
+                    'approved' => false,
+                    'rejected' => false,
+                    'cancelled' => true,
+                    'expired' => true,
+                ],
+                'student' => [
+                    'pending' => false,
+                    'approved' => false,
+                    'rejected' => true,
+                    'cancelled' => true,
+                    'expired' => true,
+                ],
+            ],
+            'updated_by' => null,
+        ],
+    );
+
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->create();
+
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->addDay()->setTime(15, 0)->setTimezone('UTC');
+    $reservation = Reservation::factory()->create([
+        'user_id' => $user->id,
+        'status' => ReservationStatus::Pending,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school_id' => $user->professional_school_id,
+        'base_year' => $user->base_year,
+    ]);
+
+    $this->actingAs($admin);
+    $this->post(route('admin.requests.approve', $reservation), ['reason' => null])->assertRedirect();
+
+    expect(ReservationArtifact::query()
+        ->where('reservation_id', $reservation->id)
+        ->whereIn('kind', [ReservationArtifactKind::EmailAdmin, ReservationArtifactKind::EmailStudent])
+        ->exists()
+    )->toBeFalse();
+
+    Queue::assertNotPushed(SendReservationEmail::class);
 });
 
 test('public availability marks approved reservations as occupied', function () {

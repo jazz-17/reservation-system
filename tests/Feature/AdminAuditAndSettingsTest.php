@@ -37,6 +37,31 @@ test('admin settings updates are audited with changed keys', function () {
     expect($event?->metadata['changed_keys'] ?? [])->toContain('min_duration_minutes');
 });
 
+test('admin settings can update notify_email_events and it is audited', function () {
+    $admin = User::factory()->admin()->create();
+
+    $payload = SettingsSchema::defaults();
+    $payload['notify_email_events']['admin']['approved'] = true;
+
+    $response = $this->actingAs($admin)
+        ->putJson(route('admin.settings.update'), $payload)
+        ->assertRedirect();
+
+    $response->assertSessionHasNoErrors();
+
+    $stored = Setting::query()->find('notify_email_events');
+    expect($stored)->not->toBeNull();
+    expect($stored?->value['admin']['approved'] ?? null)->toBeTrue();
+
+    $event = AuditEvent::query()
+        ->where('event_type', 'settings.updated')
+        ->latest('created_at')
+        ->first();
+
+    expect($event)->not->toBeNull();
+    expect($event?->metadata['changed_keys'] ?? [])->toContain('notify_email_events');
+});
+
 test('admin settings update validation rejects invalid values', function () {
     $admin = User::factory()->admin()->create();
 
@@ -49,6 +74,18 @@ test('admin settings update validation rejects invalid values', function () {
         ->assertJsonValidationErrors(['lead_time_max_days']);
 
     expect(AuditEvent::query()->where('event_type', 'settings.updated')->exists())->toBeFalse();
+});
+
+test('admin settings update validation rejects invalid notify_email_events values', function () {
+    $admin = User::factory()->admin()->create();
+
+    $payload = SettingsSchema::defaults();
+    $payload['notify_email_events']['admin']['pending'] = 'nope';
+
+    $this->actingAs($admin)
+        ->putJson(route('admin.settings.update'), $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['notify_email_events.admin.pending']);
 });
 
 test('admin can reset settings to defaults and it is audited', function () {

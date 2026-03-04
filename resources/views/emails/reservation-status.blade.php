@@ -10,6 +10,8 @@
 
 @if ($event === 'approved')
     <p>Tu reserva fue <strong>aprobada</strong>.</p>
+@elseif ($event === 'pending')
+    <p>Se ha registrado una nueva solicitud de reserva.</p>
 @elseif ($event === 'rejected')
     <p>Tu reserva fue <strong>rechazada</strong>.</p>
 @elseif ($event === 'cancelled')

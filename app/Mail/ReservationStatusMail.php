@@ -27,6 +27,7 @@ class ReservationStatusMail extends Mailable
     public function envelope(): Envelope
     {
         $subject = match ($this->event) {
+            'pending' => 'Nueva solicitud de reserva',
             'approved' => 'Reserva aprobada',
             'rejected' => 'Reserva rechazada',
             'cancelled' => 'Reserva cancelada',

@@ -38,6 +38,7 @@ class SettingsSchema
                 'cc' => [],
                 'bcc' => [],
             ],
+            'notify_email_events' => NotificationSettings::defaultNotifyEmailEvents(),
         ];
     }
 
@@ -118,7 +119,16 @@ class SettingsSchema
             'notify_admin_emails.cc.*' => ['email'],
             'notify_admin_emails.bcc' => ['present', 'array'],
             'notify_admin_emails.bcc.*' => ['email'],
+            'notify_email_events' => ['required', 'array'],
         ];
+
+        foreach (NotificationSettings::recipientRoles() as $role) {
+            $rules["notify_email_events.{$role}"] = ['required', 'array'];
+
+            foreach (NotificationSettings::emailEventKeys() as $event) {
+                $rules["notify_email_events.{$role}.{$event}"] = ['required', 'boolean'];
+            }
+        }
 
         foreach (self::DAYS as $day) {
             $rules["opening_hours.{$day}"] = ['required', 'array'];

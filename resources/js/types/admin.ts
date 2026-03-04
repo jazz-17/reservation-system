@@ -4,6 +4,18 @@ export type ReservationStatus =
     | 'rejected'
     | 'cancelled';
 
+export type NotifyEmailEventKey =
+    | 'pending'
+    | 'approved'
+    | 'rejected'
+    | 'cancelled'
+    | 'expired';
+
+export type NotifyEmailEvents = {
+    admin: Record<NotifyEmailEventKey, boolean>;
+    student: Record<NotifyEmailEventKey, boolean>;
+};
+
 export type ArtifactKind = 'email_admin' | 'email_student';
 
 export type ArtifactStatus = 'pending' | 'sent' | 'failed' | 'skipped';
@@ -144,6 +156,7 @@ export type AdminSettings = {
     pending_expiration_hours: number;
     cancel_cutoff_hours: number;
     notify_admin_emails: { to: string[]; cc: string[]; bcc: string[] };
+    notify_email_events: NotifyEmailEvents;
 };
 
 export type ImportReport = {
