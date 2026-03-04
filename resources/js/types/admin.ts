@@ -31,6 +31,19 @@ export type AdminReservation = {
     user: AdminUser;
 };
 
+export type PaginationLink = {
+    url: string | null;
+    label: string;
+    active: boolean;
+};
+
+export type PaginatedResponse<T> = {
+    data: T[];
+    links: PaginationLink[];
+    current_page: number;
+    last_page: number;
+};
+
 export type SimplePaginatedResponse<T> = {
     current_page: number;
     data: T[];

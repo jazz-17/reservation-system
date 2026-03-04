@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import { Form, Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import AdminSection from '@/components/admin/AdminSection.vue';
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
-import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { NativeSelect } from '@/components/ui/native-select';
 import {
     Table,
     TableBody,
@@ -18,33 +15,16 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import TablePagination from '@/components/admin/TablePagination.vue';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import adminAllowListRoutes from '@/routes/admin/allow-list';
 import adminRequestsRoutes from '@/routes/admin/requests';
-import type { AllowListEntry } from '@/types/admin';
-
-type PaginationLink = {
-    url: string | null;
-    label: string;
-    active: boolean;
-};
+import type { AllowListEntry, PaginatedResponse } from '@/types/admin';
 
 const props = defineProps<{
     count: number;
-    entries: {
-        data: AllowListEntry[];
-        links: PaginationLink[];
-        current_page: number;
-        last_page: number;
-    };
+    entries: PaginatedResponse<AllowListEntry>;
     filters: { search: string };
-    schools: Array<{
-        id: number;
-        name: string;
-        code: string | null;
-        base_year_min: number;
-        base_year_max: number;
-    }>;
 }>();
 
 useBreadcrumbs([
@@ -98,7 +78,10 @@ const remove = (id: number): void => {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    @click="search = ''; submitSearch()"
+                    @click="
+                        search = '';
+                        submitSearch();
+                    "
                 >
                     Limpiar
                 </Button>
@@ -117,78 +100,41 @@ const remove = (id: number): void => {
             </TableHeader>
             <TableBody>
                 <TableRow v-for="entry in props.entries.data" :key="entry.id">
-                    <TableCell colspan="4">
-                        <Form
-                            v-bind="adminAllowListRoutes.update.form(entry.id)"
-                            v-slot="{ errors, processing }"
-                            class="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-2"
-                        >
-                            <div class="grid gap-1">
-                                <Input
-                                    name="email"
-                                    type="email"
-                                    :default-value="entry.email"
-                                    required
-                                />
-                                <InputError :message="errors.email" />
-                            </div>
-
-                            <div class="grid gap-1">
-                                <NativeSelect
-                                    name="professional_school_id"
-                                    :default-value="entry.professional_school?.id ? String(entry.professional_school.id) : ''"
-                                    required
-                                >
-                                    <option value="" disabled>—</option>
-                                    <option
-                                        v-for="s in props.schools"
-                                        :key="s.id"
-                                        :value="String(s.id)"
-                                    >
-                                        {{ s.name }}
-                                    </option>
-                                </NativeSelect>
-                                <InputError :message="errors.professional_school_id" />
-                            </div>
-
-                            <div class="grid gap-1">
-                                <Input
-                                    name="student_code"
-                                    type="text"
-                                    inputmode="numeric"
-                                    class="w-28"
-                                    :default-value="entry.student_code ?? ''"
-                                    required
-                                />
-                                <InputError :message="errors.student_code" />
-                            </div>
-
-                            <div class="flex items-center gap-1">
-                                <Button
-                                    type="submit"
-                                    variant="outline"
-                                    size="sm"
-                                    :disabled="processing"
-                                >
-                                    Guardar
-                                </Button>
-                            </div>
-                        </Form>
-                    </TableCell>
+                    <TableCell>{{ entry.email }}</TableCell>
+                    <TableCell>{{
+                        entry.professional_school?.name ?? '—'
+                    }}</TableCell>
+                    <TableCell>{{ entry.student_code ?? '—' }}</TableCell>
+                    <TableCell>{{ entry.base_year ?? '—' }}</TableCell>
                     <TableCell class="text-right">
-                        <ConfirmDialog
-                            title="¿Eliminar esta entrada?"
-                            description="Esta acción no se puede deshacer."
-                            confirm-label="Eliminar"
-                            variant="destructive"
-                            @confirm="remove(entry.id)"
-                        >
-                            <template #trigger>
-                                <Button type="button" variant="ghost" size="sm">
-                                    Eliminar
-                                </Button>
-                            </template>
-                        </ConfirmDialog>
+                        <div class="flex items-center justify-end gap-1">
+                            <Button as-child variant="outline" size="sm">
+                                <Link
+                                    :href="
+                                        adminAllowListRoutes.edit(entry.id).url
+                                    "
+                                >
+                                    Editar
+                                </Link>
+                            </Button>
+                            <ConfirmDialog
+                                title="¿Eliminar esta entrada?"
+                                description="Esta acción no se puede deshacer."
+                                confirm-label="Eliminar"
+                                variant="destructive"
+                                @confirm="remove(entry.id)"
+                            >
+                                <template #trigger>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                    >
+                                        Eliminar
+                                    </Button>
+                                </template>
+                            </ConfirmDialog>
+                        </div>
                     </TableCell>
                 </TableRow>
 
@@ -196,28 +142,11 @@ const remove = (id: number): void => {
                     Sin entradas.
                 </TableEmpty>
             </TableBody>
+            <TablePagination
+                :links="props.entries.links"
+                :last-page="props.entries.last_page"
+                :colspan="5"
+            />
         </Table>
-
-        <div
-            v-if="props.entries.last_page > 1"
-            class="flex items-center justify-center gap-1"
-        >
-            <template v-for="link in props.entries.links" :key="link.label">
-                <Button
-                    v-if="link.url"
-                    variant="outline"
-                    size="sm"
-                    :class="{ 'font-bold': link.active }"
-                    @click="router.get(link.url!)"
-                >
-                    <span v-html="link.label" />
-                </Button>
-                <span
-                    v-else
-                    class="px-2 text-sm text-muted-foreground"
-                    v-html="link.label"
-                />
-            </template>
-        </div>
     </div>
 </template>

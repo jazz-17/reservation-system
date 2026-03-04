@@ -32,22 +32,21 @@ class AllowListController extends Controller
             'entries' => $entries,
             'filters' => ['search' => $search],
             'count' => AllowListEntry::query()->count(),
-            'schools' => ProfessionalSchool::query()
-                ->where('active', true)
-                ->whereHas('faculty', fn ($query) => $query->where('active', true))
-                ->orderBy('name')
-                ->get(['id', 'name', 'code', 'base_year_min', 'base_year_max']),
         ]);
     }
 
     public function create(): InertiaResponse
     {
         return Inertia::render('admin/AllowListCreate', [
-            'schools' => ProfessionalSchool::query()
-                ->where('active', true)
-                ->whereHas('faculty', fn ($query) => $query->where('active', true))
-                ->orderBy('name')
-                ->get(['id', 'name', 'code', 'base_year_min', 'base_year_max']),
+            'schools' => $this->activeSchools(),
+        ]);
+    }
+
+    public function edit(AllowListEntry $allowListEntry): InertiaResponse
+    {
+        return Inertia::render('admin/AllowListEdit', [
+            'entry' => $allowListEntry->load('professionalSchool:id,name'),
+            'schools' => $this->activeSchools(),
         ]);
     }
 
@@ -109,7 +108,7 @@ class AllowListController extends Controller
             'base_year' => $allowListEntry->base_year,
         ]);
 
-        return back()->with('success', 'Entrada actualizada correctamente.');
+        return to_route('admin.allow-list.index')->with('success', 'Entrada actualizada correctamente.');
     }
 
     public function destroy(Request $request, AllowListEntry $allowListEntry): RedirectResponse
@@ -130,5 +129,17 @@ class AllowListController extends Controller
         Audit::record('allow_list.entry_deleted', actor: $user, metadata: $metadata);
 
         return back()->with('success', 'Entrada eliminada de la allow-list.');
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, ProfessionalSchool>
+     */
+    private function activeSchools(): \Illuminate\Database\Eloquent\Collection
+    {
+        return ProfessionalSchool::query()
+            ->where('active', true)
+            ->whereHas('faculty', fn ($query) => $query->where('active', true))
+            ->orderBy('name')
+            ->get(['id', 'name', 'code', 'base_year_min', 'base_year_max']);
     }
 }

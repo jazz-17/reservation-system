@@ -8,6 +8,7 @@ use App\Models\ProfessionalSchool;
 use App\Models\RecurringBlackout;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('allow-list page renders', function () {
@@ -20,7 +21,6 @@ test('allow-list page renders', function () {
             ->component('admin/AllowList')
             ->has('count')
             ->has('entries')
-            ->has('schools')
         );
 });
 
@@ -33,6 +33,24 @@ test('allow-list create page renders', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/AllowListCreate')
             ->has('schools')
+        );
+});
+
+test('allow-list edit page renders with entry data', function () {
+    $admin = User::factory()->admin()->create();
+
+    $entry = AllowListEntry::factory()->create([
+        'email' => 'edit@unmsm.edu.pe',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.allow-list.edit', $entry))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/AllowListEdit')
+            ->has('entry')
+            ->has('schools')
+            ->where('entry.email', 'edit@unmsm.edu.pe')
         );
 });
 
@@ -212,7 +230,7 @@ test('admins can update an allow-list entry', function () {
             'professional_school_id' => $school->id,
             'student_code' => '23000002',
         ])
-        ->assertRedirect();
+        ->assertRedirect(route('admin.allow-list.index'));
 
     $entry->refresh();
     expect($entry->email)->toBe('updated@unmsm.edu.pe');
@@ -293,4 +311,56 @@ test('admins can create and delete recurring blackouts (audited)', function () {
         ->where('event_type', 'recurring_blackout.deleted')
         ->where('metadata->recurring_blackout_id', $recurring->id)
         ->exists())->toBeTrue();
+});
+
+test('artisan padron import rejects invalid database connection', function () {
+    $csv = implode("\n", [
+        'codigo,base,correo,programa',
+        '22000011,22,one@unmsm.edu.pe,E.P. de Ingeniería de Sistemas',
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'padron-');
+    file_put_contents($path, $csv);
+
+    $this->artisan('allow-list:import-padron', [
+        'path' => $path,
+        '--database' => 'nonexistent',
+    ])->assertExitCode(1)
+        ->expectsOutput("Database connection 'nonexistent' is not configured.");
+});
+
+test('artisan padron import with --database restores default connection', function () {
+    $admin = User::factory()->admin()->create([
+        'email' => 'admin@unmsm.edu.pe',
+    ]);
+
+    $faculty = Faculty::factory()->create(['active' => true]);
+    ProfessionalSchool::factory()->create([
+        'faculty_id' => $faculty->id,
+        'code' => 'ep_sistemas',
+        'active' => true,
+        'base_year_min' => 2020,
+        'base_year_max' => 2024,
+    ]);
+
+    $csv = implode("\n", [
+        'codigo,base,correo,programa',
+        '22000011,22,one@unmsm.edu.pe,E.P. de Ingeniería de Sistemas',
+        '',
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'padron-');
+    file_put_contents($path, $csv);
+
+    $defaultConnection = DB::getDefaultConnection();
+
+    $this->artisan('allow-list:import-padron', [
+        'path' => $path,
+        '--mode' => 'replace',
+        '--admin-email' => 'admin@unmsm.edu.pe',
+        '--database' => $defaultConnection,
+    ])->assertExitCode(0);
+
+    expect(AllowListEntry::query()->count())->toBe(1);
+    expect(DB::getDefaultConnection())->toBe($defaultConnection);
 });

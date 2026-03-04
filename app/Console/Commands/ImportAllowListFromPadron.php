@@ -22,7 +22,8 @@ class ImportAllowListFromPadron extends Command
         {path=temp/PADRON20.csv : Path to PADRON CSV file}
         {--mode=replace : replace|merge}
         {--admin-email= : Email of the admin performing the import}
-        {--dry-run : Parse and report only; do not write to DB}';
+        {--dry-run : Parse and report only; do not write to DB}
+        {--database= : Database connection name (e.g. production)}';
 
     /**
      * The console command description.
@@ -35,6 +36,43 @@ class ImportAllowListFromPadron extends Command
      * Execute the console command.
      */
     public function handle(): int
+    {
+        $database = $this->option('database');
+        $previousConnection = null;
+
+        if (is_string($database) && $database !== '') {
+            $previousConnection = DB::getDefaultConnection();
+
+            if (config("database.connections.{$database}") === null) {
+                $this->error("Database connection '{$database}' is not configured.");
+
+                return self::FAILURE;
+            }
+
+            DB::setDefaultConnection($database);
+
+            try {
+                DB::connection($database)->getPdo();
+            } catch (\Throwable $e) {
+                $this->error("Cannot connect to '{$database}': {$e->getMessage()}");
+                DB::setDefaultConnection($previousConnection);
+
+                return self::FAILURE;
+            }
+
+            $this->warn("Using database connection: {$database}");
+        }
+
+        try {
+            return $this->executeImport();
+        } finally {
+            if ($previousConnection !== null) {
+                DB::setDefaultConnection($previousConnection);
+            }
+        }
+    }
+
+    private function executeImport(): int
     {
         $path = (string) $this->argument('path');
         $mode = Str::lower(trim((string) $this->option('mode')));

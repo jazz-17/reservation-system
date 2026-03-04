@@ -99,6 +99,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'permiss
     Route::post('allow-list', [AllowListController::class, 'store'])
         ->middleware('permission:admin.gestion.allow_list.import')
         ->name('allow-list.store');
+    Route::get('allow-list/{allow_list_entry}/editar', [AllowListController::class, 'edit'])
+        ->middleware('permission:admin.gestion.allow_list.import')
+        ->name('allow-list.edit');
     Route::put('allow-list/{allow_list_entry}', [AllowListController::class, 'update'])
         ->middleware('permission:admin.gestion.allow_list.import')
         ->name('allow-list.update');

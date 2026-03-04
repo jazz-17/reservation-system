@@ -33,25 +33,15 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import TablePagination from '@/components/admin/TablePagination.vue';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { formatDate, formatDateTime } from '@/lib/formatters';
 import adminRequestsRoutes from '@/routes/admin/requests';
 import adminUsersRoutes from '@/routes/admin/users';
-import type { ManagedUser } from '@/types/admin';
-
-type PaginationLink = {
-    url: string | null;
-    label: string;
-    active: boolean;
-};
+import type { ManagedUser, PaginatedResponse } from '@/types/admin';
 
 const props = defineProps<{
-    users: {
-        data: ManagedUser[];
-        links: PaginationLink[];
-        current_page: number;
-        last_page: number;
-    };
+    users: PaginatedResponse<ManagedUser>;
     filters: { search: string };
     available_roles: string[];
 }>();
@@ -432,28 +422,11 @@ const resendVerification = (user: ManagedUser): void => {
                     Sin resultados.
                 </TableEmpty>
             </TableBody>
+            <TablePagination
+                :links="props.users.links"
+                :last-page="props.users.last_page"
+                :colspan="5"
+            />
         </Table>
-
-        <div
-            v-if="props.users.last_page > 1"
-            class="flex items-center justify-center gap-1"
-        >
-            <template v-for="link in props.users.links" :key="link.label">
-                <Button
-                    v-if="link.url"
-                    variant="outline"
-                    size="sm"
-                    :class="{ 'font-bold': link.active }"
-                    @click="router.get(link.url!)"
-                >
-                    <span v-html="link.label" />
-                </Button>
-                <span
-                    v-else
-                    class="px-2 text-sm text-muted-foreground"
-                    v-html="link.label"
-                />
-            </template>
-        </div>
     </div>
 </template>
