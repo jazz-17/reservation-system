@@ -34,7 +34,9 @@ test('student can download pdf for their approved reservation', function () {
 });
 
 test('pdf blade loads signatures from resources path', function () {
-    $school = ProfessionalSchool::factory()->create();
+    $school = ProfessionalSchool::factory()->create([
+        'name' => 'E.P. Sistemas',
+    ]);
     $student = User::factory()->create([
         'professional_school_id' => $school->id,
         'base_year' => 2022,
@@ -55,6 +57,8 @@ test('pdf blade loads signatures from resources path', function () {
     ])->render();
 
     expect($html)->toContain('data:image/png;base64,');
+    expect($html)->toContain('E.P. Sistemas B22');
+    expect($html)->not->toContain('E.P E.P');
 });
 
 test('student cannot download another student reservation pdf', function () {

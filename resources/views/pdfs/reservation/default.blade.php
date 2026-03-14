@@ -27,8 +27,11 @@
 
     $userName = trim(($user?->last_name ?? '') . ', ' . ($user?->first_name ?? ''));
     $schoolName = $school?->name ?? '—';
+    $schoolLabel = preg_match('/^E\.?\s*P\.?/iu', $schoolName) === 1
+        ? $schoolName
+        : "E.P. {$schoolName}";
     $baseLabel = $reservation->baseLabel();
-    $requester = "{$userName} E.P {$schoolName} {$baseLabel}";
+    $requester = "{$userName} {$schoolLabel} {$baseLabel}";
 
     // Signature images (base64-encoded for DomPDF)
     $signaturePath = resource_path('pdfs/signatures');
