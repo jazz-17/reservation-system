@@ -31,7 +31,7 @@
     $requester = "{$userName} E.P {$schoolName} {$baseLabel}";
 
     // Signature images (base64-encoded for DomPDF)
-    $signaturePath = storage_path('app/signatures');
+    $signaturePath = resource_path('pdfs/signatures');
     $signatures = [];
     foreach (['signer_1', 'signer_2', 'signer_3'] as $signer) {
         $file = $signaturePath . '/' . $signer . '.png';

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Enums\ReservationStatus;
+use App\Models\ProfessionalSchool;
 use App\Models\Reservation;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -30,6 +31,30 @@ test('student can download pdf for their approved reservation', function () {
     $this->get(route('reservations.pdf.show', $reservation))
         ->assertOk()
         ->assertHeader('content-type', 'application/pdf');
+});
+
+test('pdf blade loads signatures from resources path', function () {
+    $school = ProfessionalSchool::factory()->create();
+    $student = User::factory()->create([
+        'professional_school_id' => $school->id,
+        'base_year' => 2022,
+    ]);
+
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->addDay()->setTime(10, 0)->setTimezone('UTC');
+    $reservation = Reservation::factory()->create([
+        'user_id' => $student->id,
+        'status' => ReservationStatus::Approved,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school_id' => $student->professional_school_id,
+        'base_year' => $student->base_year,
+    ])->load(['user', 'professionalSchool.faculty']);
+
+    $html = view('pdfs.reservation.default', [
+        'reservation' => $reservation,
+    ])->render();
+
+    expect($html)->toContain('data:image/png;base64,');
 });
 
 test('student cannot download another student reservation pdf', function () {
