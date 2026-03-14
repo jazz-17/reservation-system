@@ -41,15 +41,21 @@ const items = computed(() => paginatedData.value?.data ?? []);
 const hasNextPage = computed(() => paginatedData.value?.next_page_url != null);
 const hasPrevPage = computed(() => paginatedData.value?.prev_page_url != null);
 
+const canCancelReservation = (reservation: AdminReservation): boolean => {
+    return new Date(reservation.ends_at).getTime() > Date.now();
+};
+
 const decide = (
-    action: 'approve' | 'reject',
+    action: 'approve' | 'reject' | 'cancel',
     reservationId: number,
     reason?: string,
 ): void => {
     const route =
         action === 'approve'
             ? adminRequestsRoutes.approve(reservationId)
-            : adminRequestsRoutes.reject(reservationId);
+            : action === 'reject'
+              ? adminRequestsRoutes.reject(reservationId)
+              : adminRequestsRoutes.cancel(reservationId);
 
     actionError.value = null;
 
@@ -171,6 +177,27 @@ const decide = (
                                     size="sm"
                                 >
                                     Rechazar
+                                </Button>
+                            </template>
+                        </ConfirmDialog>
+                        <ConfirmDialog
+                            v-if="canCancelReservation(r)"
+                            title="Cancelar solicitud"
+                            description="La reserva pasará a estado cancelada y liberará el cupo activo del estudiante."
+                            confirm-label="Cancelar reserva"
+                            variant="destructive"
+                            input-label="Motivo (opcional)"
+                            @confirm="
+                                (reason) => decide('cancel', r.id, reason)
+                            "
+                        >
+                            <template #trigger>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                >
+                                    Cancelar
                                 </Button>
                             </template>
                         </ConfirmDialog>

@@ -157,7 +157,6 @@ export type AdminSettings = {
     max_active_reservations_per_user: number;
     weekly_quota_per_school_base: number;
     pending_expiration_hours: number;
-    cancel_cutoff_hours: number;
     notify_admin_emails: { to: string[]; cc: string[]; bcc: string[] };
     notify_email_events: NotifyEmailEvents;
 };

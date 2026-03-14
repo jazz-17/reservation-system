@@ -75,7 +75,7 @@ const derivedBaseLabel = computed(() => {
     <div class="flex flex-col gap-4 p-4">
         <AdminPageHeader
             title="Editar correo"
-            subtitle="Modifica los datos de esta entrada en la allow-list."
+            subtitle="Modifica los datos que se usarán para futuros registros con este correo. Los cambios no actualizan cuentas ya creadas."
         />
 
         <AdminSection title="Datos de la entrada">

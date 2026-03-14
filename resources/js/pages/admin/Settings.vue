@@ -283,12 +283,6 @@ const resetToDefaults = (): void => {
                         <Input id="pending_expiration" v-model.number="formState.pending_expiration_hours" type="number" />
                         <InputError :message="errors.pending_expiration_hours" />
                     </div>
-
-                    <div class="grid gap-1">
-                        <Label for="cancel_cutoff_hours">Corte cancelación (h)</Label>
-                        <Input id="cancel_cutoff_hours" v-model.number="formState.cancel_cutoff_hours" type="number" />
-                        <InputError :message="errors.cancel_cutoff_hours" />
-                    </div>
                 </div>
             </div>
 

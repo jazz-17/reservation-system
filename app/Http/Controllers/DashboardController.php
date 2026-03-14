@@ -44,7 +44,7 @@ class DashboardController extends Controller
             'upcoming_reservations' => $this->upcomingReservations($user, $nowUtc),
             'active_count' => Reservation::query()
                 ->where('user_id', $user->id)
-                ->blocking()
+                ->active($nowUtc)
                 ->count(),
             'max_active' => $settings->getInt('max_active_reservations_per_user'),
             'weekly_quota_used' => $this->weeklyQuotaUsed($user, $nowLocal),
@@ -171,8 +171,7 @@ class DashboardController extends Controller
     {
         return Reservation::query()
             ->where('user_id', $user->id)
-            ->blocking()
-            ->where('ends_at', '>', $nowUtc)
+            ->active($nowUtc)
             ->orderBy('starts_at')
             ->limit(3)
             ->get(['id', 'status', 'starts_at', 'ends_at', 'created_at'])

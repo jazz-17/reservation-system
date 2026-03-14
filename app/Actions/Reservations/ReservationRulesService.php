@@ -79,15 +79,11 @@ class ReservationRulesService
             ]);
         }
 
-        $timezone = $this->timezone();
-        $cutoffHours = $this->settings->getInt('cancel_cutoff_hours');
+        $nowUtc = CarbonImmutable::now('UTC');
 
-        $startsAtLocal = CarbonImmutable::parse($reservation->starts_at)->setTimezone($timezone);
-        $nowLocal = CarbonImmutable::now($timezone);
-
-        if ($nowLocal->greaterThan($startsAtLocal->subHours($cutoffHours))) {
+        if ($reservation->ends_at->lessThanOrEqualTo($nowUtc)) {
             throw ValidationException::withMessages([
-                'reservation' => 'Ya no es posible cancelar esta reserva (fuera del tiempo límite).',
+                'reservation' => 'No se puede cancelar una reserva finalizada.',
             ]);
         }
     }
@@ -272,8 +268,8 @@ class ReservationRulesService
         }
 
         $activeCount = Reservation::query()
-            ->blocking()
             ->where('user_id', $user->id)
+            ->active(CarbonImmutable::now('UTC'))
             ->count();
 
         if ($activeCount >= $maxActive) {

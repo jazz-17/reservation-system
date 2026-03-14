@@ -71,7 +71,7 @@ const derivedBaseLabel = computed(() => {
     <div class="flex flex-col gap-4 p-4">
         <AdminPageHeader
             title="Agregar correo"
-            subtitle="El alumno se registra solo con su correo autorizado. La escuela y la base se asignan desde esta allow-list."
+            subtitle="El alumno puede crear su cuenta con este correo. La escuela, base y código se copiarán al momento del registro y no actualizarán cuentas ya creadas."
         />
 
         <AdminSection title="Nuevo correo">

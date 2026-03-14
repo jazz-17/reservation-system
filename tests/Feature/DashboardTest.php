@@ -46,6 +46,7 @@ test('dashboard shows correct active count', function () {
     $this->actingAs($student);
 
     $startsAtUtc = CarbonImmutable::now('America/Lima')->addDay()->setTime(10, 0)->setTimezone('UTC');
+    $pastStartsAtUtc = CarbonImmutable::now('America/Lima')->subDay()->setTime(10, 0)->setTimezone('UTC');
 
     // pending reservation (counts as blocking)
     Reservation::factory()->create([
@@ -63,6 +64,16 @@ test('dashboard shows correct active count', function () {
         'status' => ReservationStatus::Approved,
         'starts_at' => $startsAtUtc->addHours(3),
         'ends_at' => $startsAtUtc->addHours(4),
+        'professional_school_id' => $student->professional_school_id,
+        'base_year' => $student->base_year,
+    ]);
+
+    // past approved reservation (should NOT count)
+    Reservation::factory()->create([
+        'user_id' => $student->id,
+        'status' => ReservationStatus::Approved,
+        'starts_at' => $pastStartsAtUtc,
+        'ends_at' => $pastStartsAtUtc->addHour(),
         'professional_school_id' => $student->professional_school_id,
         'base_year' => $student->base_year,
     ]);

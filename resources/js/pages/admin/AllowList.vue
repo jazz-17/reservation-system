@@ -4,6 +4,7 @@ import { ref } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import AdminSection from '@/components/admin/AdminSection.vue';
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
+import TablePagination from '@/components/admin/TablePagination.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,7 +16,6 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import TablePagination from '@/components/admin/TablePagination.vue';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import adminAllowListRoutes from '@/routes/admin/allow-list';
 import adminRequestsRoutes from '@/routes/admin/requests';
@@ -53,7 +53,7 @@ const remove = (id: number): void => {
     <div class="flex flex-col gap-4 p-4">
         <AdminPageHeader
             title="Allow-list"
-            :subtitle="`Correos permitidos para registrarse. Total: ${props.count}`"
+            :subtitle="`Correos autorizados para crear cuenta. La escuela, base y código se copian al registrarse. Total: ${props.count}`"
         >
             <Button as-child>
                 <Link :href="adminAllowListRoutes.create().url">
@@ -119,7 +119,7 @@ const remove = (id: number): void => {
                             </Button>
                             <ConfirmDialog
                                 title="¿Eliminar esta entrada?"
-                                description="Esta acción no se puede deshacer."
+                                description="Esta acción no se puede deshacer. No modifica cuentas ya registradas."
                                 confirm-label="Eliminar"
                                 variant="destructive"
                                 @confirm="remove(entry.id)"

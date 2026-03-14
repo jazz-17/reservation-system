@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { keepPreviousData, useQuery } from '@tanstack/vue-query';
+import { Head, router } from '@inertiajs/vue3';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { computed, ref, watch } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
 import AdminSection from '@/components/admin/AdminSection.vue';
 import PaginationFooter from '@/components/admin/PaginationFooter.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
@@ -32,6 +35,12 @@ useBreadcrumbs([
     { title: 'Admin', href: adminRequestsRoutes.index().url },
     { title: 'Historial', href: adminHistoryRoutes.index().url },
 ]);
+
+const queryClient = useQueryClient();
+
+const actionError = ref<{ reservationId: number; message: string } | null>(
+    null,
+);
 
 const status = ref<string>('');
 const from = ref<string>('');
@@ -65,6 +74,35 @@ const { data: paginatedData, isLoading, isError, isPlaceholderData } = useQuery(
 const items = computed(() => paginatedData.value?.data ?? []);
 const hasNextPage = computed(() => paginatedData.value?.next_page_url != null);
 const hasPrevPage = computed(() => paginatedData.value?.prev_page_url != null);
+
+const canCancelReservation = (reservation: AdminReservation): boolean => {
+    if (reservation.status !== 'pending' && reservation.status !== 'approved') {
+        return false;
+    }
+
+    return new Date(reservation.ends_at).getTime() > Date.now();
+};
+
+const cancel = (reservationId: number, reason?: string): void => {
+    actionError.value = null;
+
+    router.post(
+        adminHistoryRoutes.cancel(reservationId).url,
+        { reason: reason ?? null },
+        {
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: ['admin-history'] });
+            },
+            onError: (errors: Record<string, string>) => {
+                const message =
+                    Object.values(errors)[0] ??
+                    'No se pudo cancelar la reserva.';
+
+                actionError.value = { reservationId, message };
+            },
+        },
+    );
+};
 </script>
 
 <template>
@@ -186,15 +224,36 @@ const hasPrevPage = computed(() => paginatedData.value?.prev_page_url != null);
                         {{ formatBaseYear(r.user.base_year) }}
                     </TableCell>
                     <TableCell class="text-right">
-                        <a
-                            v-if="r.status === 'approved'"
-                            :href="reservationPdfRoutes.show(r.id).url"
-                            class="rounded-md border border-border/60 px-3 py-1.5 text-xs"
-                            target="_blank"
-                            rel="noopener"
-                        >
-                            PDF
-                        </a>
+                        <div class="flex justify-end gap-2">
+                            <a
+                                v-if="r.status === 'approved'"
+                                :href="reservationPdfRoutes.show(r.id).url"
+                                class="rounded-md border border-border/60 px-3 py-1.5 text-xs"
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                PDF
+                            </a>
+                            <ConfirmDialog
+                                v-if="canCancelReservation(r)"
+                                title="Cancelar reserva"
+                                description="La reserva pasará a estado cancelada y dejará de contar como activa."
+                                confirm-label="Cancelar reserva"
+                                variant="destructive"
+                                input-label="Motivo (opcional)"
+                                @confirm="(reason) => cancel(r.id, reason)"
+                            >
+                                <template #trigger>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                    >
+                                        Cancelar
+                                    </Button>
+                                </template>
+                            </ConfirmDialog>
+                        </div>
                     </TableCell>
                 </TableRow>
                 <TableEmpty
@@ -205,6 +264,12 @@ const hasPrevPage = computed(() => paginatedData.value?.prev_page_url != null);
                 </TableEmpty>
             </TableBody>
         </Table>
+
+        <Alert v-if="actionError" variant="destructive">
+            <AlertDescription>
+                {{ actionError.message }}
+            </AlertDescription>
+        </Alert>
 
         <PaginationFooter
             v-if="!isLoading && !isError && (items.length > 0 || hasPrevPage)"

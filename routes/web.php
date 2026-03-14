@@ -55,10 +55,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'permiss
     Route::post('solicitudes/{reservation}/rechazar', [ReservationRequestController::class, 'reject'])
         ->middleware('permission:admin.reservas.solicitudes.decide')
         ->name('requests.reject');
+    Route::post('solicitudes/{reservation}/cancelar', [ReservationRequestController::class, 'cancel'])
+        ->middleware('throttle:6,1')
+        ->can('cancel', 'reservation')
+        ->name('requests.cancel');
 
     Route::get('historial', [ReservationHistoryController::class, 'index'])
         ->middleware('permission:admin.reservas.historial.view')
         ->name('history.index');
+    Route::post('historial/{reservation}/cancelar', [ReservationHistoryController::class, 'cancel'])
+        ->middleware('throttle:6,1')
+        ->can('cancel', 'reservation')
+        ->name('history.cancel');
 
     Route::get('configuracion', [SettingsController::class, 'edit'])
         ->middleware('permission:admin.gestion.configuracion.manage')

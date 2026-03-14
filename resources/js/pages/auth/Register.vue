@@ -16,7 +16,7 @@ defineOptions({ layout: false });
 <template>
     <AuthBase
         title="Crear cuenta"
-        description="Regístrate con tu correo autorizado"
+        description="Regístrate con un correo autorizado"
     >
         <Head title="Registro" />
 
@@ -30,8 +30,8 @@ defineOptions({ layout: false });
                 <div
                     class="rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
                 >
-                    Tu escuela y base se asignan automáticamente según tu
-                    registro institucional.
+                    Tu escuela, base y código se asignan automáticamente al
+                    crear tu cuenta según tu registro autorizado.
                 </div>
 
                 <div class="grid gap-6 md:grid-cols-2">

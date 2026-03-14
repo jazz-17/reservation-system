@@ -87,6 +87,17 @@ class Reservation extends Model
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
+    public function scopeActive(Builder $query, CarbonInterface $nowUtc): Builder
+    {
+        return $query
+            ->blocking()
+            ->where('ends_at', '>', $nowUtc);
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
     public function scopeApproved(Builder $query): Builder
     {
         return $query->where('status', ReservationStatus::Approved);

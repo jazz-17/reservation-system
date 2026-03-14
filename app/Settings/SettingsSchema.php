@@ -32,7 +32,6 @@ class SettingsSchema
             'max_active_reservations_per_user' => 1,
             'weekly_quota_per_school_base' => 2,
             'pending_expiration_hours' => 24,
-            'cancel_cutoff_hours' => 2,
             'notify_admin_emails' => [
                 'to' => ['kevin.quispe5@unmsm.edu.pe'],
                 'cc' => [],
@@ -110,7 +109,6 @@ class SettingsSchema
             'max_active_reservations_per_user' => ['required', 'integer', 'min:0', 'max:50'],
             'weekly_quota_per_school_base' => ['required', 'integer', 'min:0', 'max:50'],
             'pending_expiration_hours' => ['required', 'integer', 'min:1', 'max:168'],
-            'cancel_cutoff_hours' => ['required', 'integer', 'min:0', 'max:168'],
             'opening_hours' => ['required', 'array'],
             'notify_admin_emails' => ['required', 'array'],
             'notify_admin_emails.to' => ['present', 'array'],

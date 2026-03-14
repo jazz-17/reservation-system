@@ -69,6 +69,8 @@ class ReservationService
 
     public function cancel(User $actor, Reservation $reservation, ?string $reason = null): Reservation
     {
+        $forceAdminEmail = $actor->id === $reservation->user_id;
+
         $this->rules->validateCancellation($actor, $reservation);
 
         $updated = DB::transaction(function () use ($actor, $reservation, $reason): Reservation {
@@ -86,7 +88,7 @@ class ReservationService
             return $reservation->refresh();
         });
 
-        $this->enqueueEmails($updated, event: 'cancelled');
+        $this->enqueueEmails($updated, event: 'cancelled', forceAdmin: $forceAdminEmail);
 
         return $updated;
     }
@@ -198,14 +200,14 @@ class ReservationService
         return $reservations->count();
     }
 
-    private function enqueueEmails(Reservation $reservation, string $event): void
+    private function enqueueEmails(Reservation $reservation, string $event, bool $forceAdmin = false): void
     {
         $reservation->loadMissing('user');
         $studentEmail = $reservation->user?->email;
         $studentEmail = is_string($studentEmail) ? trim($studentEmail) : '';
 
         $notify = $this->settings->get('notify_email_events');
-        $notifyAdmin = $this->isEmailEventEnabled($notify, role: 'admin', event: $event);
+        $notifyAdmin = $forceAdmin || $this->isEmailEventEnabled($notify, role: 'admin', event: $event);
         $notifyStudent = $studentEmail !== '' && $this->isEmailEventEnabled($notify, role: 'student', event: $event);
 
         if ($notifyAdmin) {

@@ -269,6 +269,31 @@ test('students are limited by max active reservations per user', function () {
         ->assertSessionHasErrors('reservation');
 });
 
+test('past approved reservations do not count toward max active reservations per user', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $pastStart = CarbonImmutable::now('America/Lima')->subDay()->setTime(12, 0)->setTimezone('UTC');
+    $futureStart = CarbonImmutable::now('America/Lima')->addDay()->setTime(12, 0)->setTimezone('UTC');
+
+    Reservation::factory()->create([
+        'user_id' => $user->id,
+        'status' => ReservationStatus::Approved,
+        'starts_at' => $pastStart,
+        'ends_at' => $pastStart->addHour(),
+        'professional_school_id' => $user->professional_school_id,
+        'base_year' => $user->base_year,
+    ]);
+
+    $this->post(route('reservations.store'), [
+        'starts_at' => $futureStart->toIso8601String(),
+        'ends_at' => $futureStart->addHour()->toIso8601String(),
+    ])->assertRedirect(route('reservations.index'));
+
+    expect(Reservation::query()->where('user_id', $user->id)->count())->toBe(2);
+    expect(Reservation::query()->where('user_id', $user->id)->blocking()->where('ends_at', '>', CarbonImmutable::now('UTC'))->count())->toBe(1);
+});
+
 test('weekly quota is enforced per school and base', function () {
     $school = ProfessionalSchool::factory()->create([
         'base_year_min' => 2020,
@@ -470,11 +495,11 @@ test('students can cancel a pending reservation', function () {
     Queue::assertPushedTimes(SendReservationEmail::class, 1);
 });
 
-test('cancellation cutoff is enforced', function () {
+test('finished reservations cannot be cancelled', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $startsAtUtc = CarbonImmutable::now('America/Lima')->addHour()->setTimezone('UTC');
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->subHours(2)->setTimezone('UTC');
 
     $reservation = Reservation::factory()->create([
         'user_id' => $user->id,
@@ -490,6 +515,38 @@ test('cancellation cutoff is enforced', function () {
 
     $reservation->refresh();
     expect($reservation->status)->toBe(ReservationStatus::Pending);
+});
+
+test('ongoing approved reservations can be cancelled by the student', function () {
+    Queue::fake();
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_admin_emails'],
+        ['value' => ['to' => [], 'cc' => [], 'bcc' => []], 'updated_by' => null],
+    );
+
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $startsAtUtc = CarbonImmutable::now('UTC')->subMinutes(30);
+
+    $reservation = Reservation::factory()->create([
+        'user_id' => $user->id,
+        'status' => ReservationStatus::Approved,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school_id' => $user->professional_school_id,
+        'base_year' => $user->base_year,
+    ]);
+
+    $this->post(route('reservations.cancel', $reservation), ['reason' => 'Se terminó antes'])
+        ->assertRedirect(route('reservations.index'));
+
+    $reservation->refresh();
+    expect($reservation->status)->toBe(ReservationStatus::Cancelled);
+    expect($reservation->cancellation_reason)->toBe('Se terminó antes');
+
+    Queue::assertPushedTimes(SendReservationEmail::class, 1);
 });
 
 test('approved reservations can be cancelled by the student', function () {
@@ -525,6 +582,69 @@ test('approved reservations can be cancelled by the student', function () {
     Queue::assertPushedTimes(SendReservationEmail::class, 1);
 });
 
+test('requester cancellation always notifies admins even when admin cancelled emails are disabled', function () {
+    Queue::fake();
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_admin_emails'],
+        ['value' => ['to' => ['admin.notify@example.edu'], 'cc' => [], 'bcc' => []], 'updated_by' => null],
+    );
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_email_events'],
+        [
+            'value' => [
+                'admin' => [
+                    'pending' => true,
+                    'approved' => false,
+                    'rejected' => false,
+                    'cancelled' => false,
+                    'expired' => true,
+                ],
+                'student' => [
+                    'pending' => false,
+                    'approved' => true,
+                    'rejected' => true,
+                    'cancelled' => false,
+                    'expired' => true,
+                ],
+            ],
+            'updated_by' => null,
+        ],
+    );
+
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->addHours(6)->setTimezone('UTC');
+
+    $reservation = Reservation::factory()->create([
+        'user_id' => $user->id,
+        'status' => ReservationStatus::Approved,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school_id' => $user->professional_school_id,
+        'base_year' => $user->base_year,
+    ]);
+
+    $this->post(route('reservations.cancel', $reservation), ['reason' => null])
+        ->assertRedirect(route('reservations.index'));
+
+    expect(ReservationArtifact::query()
+        ->where('reservation_id', $reservation->id)
+        ->where('kind', ReservationArtifactKind::EmailAdmin)
+        ->exists()
+    )->toBeTrue();
+
+    expect(ReservationArtifact::query()
+        ->where('reservation_id', $reservation->id)
+        ->where('kind', ReservationArtifactKind::EmailStudent)
+        ->exists()
+    )->toBeFalse();
+
+    Queue::assertPushedTimes(SendReservationEmail::class, 1);
+});
+
 test('students cannot cancel another student reservation', function () {
     $owner = User::factory()->create();
     $attacker = User::factory()->create();
@@ -543,6 +663,122 @@ test('students cannot cancel another student reservation', function () {
     $this->actingAs($attacker)
         ->post(route('reservations.cancel', $reservation), ['reason' => null])
         ->assertForbidden();
+});
+
+test('admins can cancel a pending reservation from requests', function () {
+    Queue::fake();
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_admin_emails'],
+        ['value' => ['to' => [], 'cc' => [], 'bcc' => []], 'updated_by' => null],
+    );
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_email_events'],
+        [
+            'value' => [
+                'admin' => [
+                    'pending' => true,
+                    'approved' => false,
+                    'rejected' => false,
+                    'cancelled' => false,
+                    'expired' => true,
+                ],
+                'student' => [
+                    'pending' => false,
+                    'approved' => true,
+                    'rejected' => true,
+                    'cancelled' => false,
+                    'expired' => true,
+                ],
+            ],
+            'updated_by' => null,
+        ],
+    );
+
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->create();
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->addHours(6)->setTimezone('UTC');
+
+    $reservation = Reservation::factory()->create([
+        'user_id' => $student->id,
+        'status' => ReservationStatus::Pending,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school_id' => $student->professional_school_id,
+        'base_year' => $student->base_year,
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.requests.cancel', $reservation), ['reason' => 'Solicitud duplicada'])
+        ->assertRedirect(route('admin.requests.index'));
+
+    $reservation->refresh();
+    expect($reservation->status)->toBe(ReservationStatus::Cancelled);
+    expect($reservation->cancelled_by)->toBe($admin->id);
+    expect($reservation->cancellation_reason)->toBe('Solicitud duplicada');
+
+    expect(AuditEvent::query()->where('event_type', 'reservation.cancelled')->where('subject_id', $reservation->id)->exists())->toBeTrue();
+
+    Queue::assertNotPushed(SendReservationEmail::class);
+});
+
+test('admins can cancel an approved reservation from history', function () {
+    Queue::fake();
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_admin_emails'],
+        ['value' => ['to' => [], 'cc' => [], 'bcc' => []], 'updated_by' => null],
+    );
+
+    Setting::query()->updateOrCreate(
+        ['key' => 'notify_email_events'],
+        [
+            'value' => [
+                'admin' => [
+                    'pending' => true,
+                    'approved' => false,
+                    'rejected' => false,
+                    'cancelled' => false,
+                    'expired' => true,
+                ],
+                'student' => [
+                    'pending' => false,
+                    'approved' => true,
+                    'rejected' => true,
+                    'cancelled' => false,
+                    'expired' => true,
+                ],
+            ],
+            'updated_by' => null,
+        ],
+    );
+
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->create();
+    $startsAtUtc = CarbonImmutable::now('America/Lima')->addHours(6)->setTimezone('UTC');
+
+    $reservation = Reservation::factory()->create([
+        'user_id' => $student->id,
+        'status' => ReservationStatus::Approved,
+        'starts_at' => $startsAtUtc,
+        'ends_at' => $startsAtUtc->addHour(),
+        'professional_school_id' => $student->professional_school_id,
+        'base_year' => $student->base_year,
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.history.cancel', $reservation), ['reason' => 'Cierre operativo'])
+        ->assertRedirect(route('admin.history.index'));
+
+    $reservation->refresh();
+    expect($reservation->status)->toBe(ReservationStatus::Cancelled);
+    expect($reservation->cancelled_by)->toBe($admin->id);
+    expect($reservation->cancellation_reason)->toBe('Cierre operativo');
+
+    expect(AuditEvent::query()->where('event_type', 'reservation.cancelled')->where('subject_id', $reservation->id)->exists())->toBeTrue();
+
+    Queue::assertNotPushed(SendReservationEmail::class);
 });
 
 test('admins can reject a pending reservation end-to-end', function () {
